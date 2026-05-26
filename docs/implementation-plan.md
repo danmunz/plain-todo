@@ -2,7 +2,7 @@
 
 ## Status
 
-This repo is still greenfield. The only product artifact is [plain-spec.md](/Users/danmunz/projects/plain-todo/docs/plain-spec.md). The plan below translates that spec into an implementation order that protects the highest-risk requirements first: todo.txt fidelity, iCloud-safe file access, conflict handling, and keyboard-first workflows.
+This repo is no longer docs-only. It now has a SwiftPM bootstrap with `PlainCore`, a SwiftUI `PlainApp` executable, parser and serializer coverage, a minimal mutation layer, coordinated read and write support, and a narrow editable shell. Full Xcode-specific packaging, widgets, app extensions, and UI-test infrastructure are still blocked by the missing full Xcode install. The plan below remains the dependency order for the remaining work.
 
 ## Recommended Stack
 
@@ -179,6 +179,11 @@ Quality gate:
 - the primary flows work without the mouse
 - every destructive action is undoable
 - all writes flow through the same coordinated store
+
+Current progress note:
+
+- the bootstrap shell already supports a minimal coordinated write path for add, complete, reprioritize, and delete
+- inline raw-line editing, keyboard navigation, selection model, reorder, and undo or redo remain open
 
 ### Phase 4. Advanced File Workflows
 
