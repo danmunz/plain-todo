@@ -1321,6 +1321,10 @@ final class PlainShellModel: ObservableObject {
         if let initialURL = launch.url {
             open(url: initialURL, persistSelection: launch.persistSelection)
         }
+
+        if let deepLinkURL = launch.deepLinkURL {
+            openDeepLink(deepLinkURL)
+        }
     }
 
     func openDeepLink(_ url: URL) {
@@ -1813,35 +1817,63 @@ final class PlainShellModel: ObservableObject {
         setSearchQuery("")
     }
 
-    private func resolveInitialLaunch() -> (url: URL?, persistSelection: Bool, restoreSelection: Bool) {
+    private func resolveInitialLaunch() -> (url: URL?, persistSelection: Bool, restoreSelection: Bool, deepLinkURL: URL?) {
         if isUITesting {
-            return (nil, false, false)
+            return (nil, false, false, nil)
         }
+
+        let deepLinkURL = launchDeepLinkArgument()
 
         if let inlineArgument = launchArguments.first(where: { $0.hasPrefix("--todo-file=") }) {
             let path = String(inlineArgument.dropFirst("--todo-file=".count))
-            return (URL(fileURLWithPath: NSString(string: path).expandingTildeInPath), true, false)
+            return (URL(fileURLWithPath: NSString(string: path).expandingTildeInPath), true, false, deepLinkURL)
         }
 
         if let flagIndex = launchArguments.firstIndex(of: "--todo-file"),
            launchArguments.indices.contains(flagIndex + 1)
         {
             let path = launchArguments[flagIndex + 1]
-            return (URL(fileURLWithPath: NSString(string: path).expandingTildeInPath), true, false)
+            return (URL(fileURLWithPath: NSString(string: path).expandingTildeInPath), true, false, deepLinkURL)
         }
 
         if launchArguments.count == 1,
            let providedPath = launchArguments.first,
            !providedPath.hasPrefix("-")
         {
-            return (URL(fileURLWithPath: NSString(string: providedPath).expandingTildeInPath), true, false)
+            if let standaloneURL = URL(string: providedPath),
+               PlainDeepLinkRoute(url: standaloneURL) != nil
+            {
+                return (sessionRestore.restoredSourceURL(), true, sessionRestore.restoredSourceURL() != nil, standaloneURL)
+            }
+
+            return (URL(fileURLWithPath: NSString(string: providedPath).expandingTildeInPath), true, false, deepLinkURL)
         }
 
         if let restoredURL = sessionRestore.restoredSourceURL() {
-            return (restoredURL, true, true)
+            return (restoredURL, true, true, deepLinkURL)
         }
 
-        return (nil, false, false)
+        return (nil, false, false, deepLinkURL)
+    }
+
+    private func launchDeepLinkArgument() -> URL? {
+        if let inlineArgument = launchArguments.first(where: { $0.hasPrefix("--deep-link=") }) {
+            let link = String(inlineArgument.dropFirst("--deep-link=".count))
+            if let url = URL(string: link), PlainDeepLinkRoute(url: url) != nil {
+                return url
+            }
+        }
+
+        if let flagIndex = launchArguments.firstIndex(of: "--deep-link"),
+           launchArguments.indices.contains(flagIndex + 1)
+        {
+            let link = launchArguments[flagIndex + 1]
+            if let url = URL(string: link), PlainDeepLinkRoute(url: url) != nil {
+                return url
+            }
+        }
+
+        return nil
     }
 
     private func bundledSampleURL() -> URL? {

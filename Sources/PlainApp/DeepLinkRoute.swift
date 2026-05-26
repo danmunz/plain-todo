@@ -18,13 +18,13 @@ struct PlainDeepLinkRoute {
         case "done":
             selection = .done
         case "project":
-            let project = url.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+            let project = Self.decodedSegment(from: url.path)
             guard !project.isEmpty else {
                 return nil
             }
             selection = .project(project)
         case "context":
-            let context = url.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+            let context = Self.decodedSegment(from: url.path)
             guard !context.isEmpty else {
                 return nil
             }
@@ -32,5 +32,10 @@ struct PlainDeepLinkRoute {
         default:
             return nil
         }
+    }
+
+    private static func decodedSegment(from rawPath: String) -> String {
+        let trimmed = rawPath.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        return trimmed.removingPercentEncoding ?? trimmed
     }
 }

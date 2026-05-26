@@ -40,6 +40,17 @@ Then run the `PlainApp` scheme. To start against a real file, add a launch argum
 
 Without an explicit launch argument, the app restores the last writable `todo.txt` file and last active sidebar filter from the previous session. Explicit launch arguments and UI-testing launches bypass that restore state.
 
+Deep links are also supported via `plain://`:
+
+- `plain://inbox`
+- `plain://today`
+- `plain://overdue`
+- `plain://done`
+- `plain://project/Some%20Project`
+- `plain://context/Some%20Context`
+
+You can pass a launch deep link as `--deep-link plain://today`, `--deep-link=plain://today`, or as a standalone launch argument like `plain://today`.
+
 The SwiftPM bootstrap is still available:
 
 ```bash

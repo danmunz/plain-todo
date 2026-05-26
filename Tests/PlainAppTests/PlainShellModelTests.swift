@@ -238,6 +238,86 @@ final class PlainShellModelTests: XCTestCase {
         XCTAssertEqual(model.visibleRows.map(\.rawText), ["Inbox cleanup @home"])
     }
 
+    func testLaunchDeepLinkArgumentOverridesRestoredSelection() throws {
+        let (sessionRestore, defaults, suiteName) = makeSessionRestoreStore()
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let temporaryDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: temporaryDirectory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: temporaryDirectory) }
+
+        let todoURL = temporaryDirectory.appendingPathComponent("todo.txt")
+        try "Review parser +plain\nInbox cleanup +ops\n".write(to: todoURL, atomically: true, encoding: .utf8)
+
+        sessionRestore.setSourceURL(todoURL)
+        sessionRestore.setSelection(.project("ops"))
+
+        let model = PlainShellModel(
+            sessionRestore: sessionRestore,
+            launchArguments: ["--deep-link", "plain://project/plain"],
+            isUITesting: false
+        )
+        model.loadInitialSnapshotIfNeeded()
+
+        XCTAssertEqual(model.selection, .project("plain"))
+        XCTAssertEqual(model.visibleRows.map(\.rawText), ["Review parser +plain"])
+    }
+
+    func testStandaloneDeepLinkLaunchArgumentUsesRestoredFile() throws {
+        let (sessionRestore, defaults, suiteName) = makeSessionRestoreStore()
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let temporaryDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: temporaryDirectory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: temporaryDirectory) }
+
+        let calendar = Calendar(identifier: .gregorian)
+        let today = Date()
+        let formatter = DateFormatter()
+        formatter.calendar = calendar
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd"
+
+        let todoURL = temporaryDirectory.appendingPathComponent("todo.txt")
+        try "File taxes due:\(formatter.string(from: today))\nPlan weekend\n".write(to: todoURL, atomically: true, encoding: .utf8)
+
+        sessionRestore.setSourceURL(todoURL)
+        sessionRestore.setSelection(.inbox)
+
+        let model = PlainShellModel(
+            sessionRestore: sessionRestore,
+            launchArguments: ["plain://today"],
+            isUITesting: false
+        )
+        model.loadInitialSnapshotIfNeeded()
+
+        XCTAssertEqual(model.selection, .today)
+        XCTAssertEqual(model.visibleRows.map(\.rawText), ["File taxes due:\(formatter.string(from: today))"])
+    }
+
+    func testDeepLinkDecodesPercentEncodedProjectAndContextNames() throws {
+        let temporaryDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: temporaryDirectory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: temporaryDirectory) }
+
+        let todoURL = temporaryDirectory.appendingPathComponent("todo.txt")
+        try "Client review +Client+Work @Phone+Calls\nInbox cleanup\n".write(to: todoURL, atomically: true, encoding: .utf8)
+
+        let model = PlainShellModel()
+        model.open(url: todoURL)
+
+        model.openDeepLink(URL(string: "plain://project/Client%2BWork")!)
+        XCTAssertEqual(model.selection, .project("Client+Work"))
+        XCTAssertEqual(model.visibleRows.map(\.rawText), ["Client review +Client+Work @Phone+Calls"])
+
+        model.openDeepLink(URL(string: "plain://context/Phone%2BCalls")!)
+        XCTAssertEqual(model.selection, .context("Phone+Calls"))
+        XCTAssertEqual(model.visibleRows.map(\.rawText), ["Client review +Client+Work @Phone+Calls"])
+    }
+
     func testSessionRestoreStoreRoundTripsSourcePathAndSelection() {
         let (sessionRestore, defaults, suiteName) = makeSessionRestoreStore()
         defer { defaults.removePersistentDomain(forName: suiteName) }
