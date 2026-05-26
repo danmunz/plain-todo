@@ -202,6 +202,19 @@ private struct PlainShellView: View {
                     .padding(.top, 76)
             }
         }
+        .sheet(
+            item: Binding(
+                get: { model.presentedConflictDiff },
+                set: { _ in model.dismissConflictDiff() }
+            )
+        ) { diff in
+            ConflictDiffSheet(
+                diff: diff,
+                reloadAction: { model.reloadFromConflictDiff() },
+                keepMineAction: { model.keepMineFromConflictDiff() },
+                closeAction: { model.dismissConflictDiff() }
+            )
+        }
     }
 
     private var onboardingView: some View {
@@ -684,6 +697,11 @@ private struct PlainShellView: View {
             Button("Keep Mine") {
                 model.keepMineAfterConflict()
             }
+
+            Button("View Diff") {
+                model.presentConflictDiff()
+            }
+            .accessibilityIdentifier("plain.conflict.viewDiff")
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
@@ -736,6 +754,7 @@ private struct PlainShellView: View {
                 scratchPadText = ""
             }
             return
+
         }
 
         guard let rawText = model.beginScratchPadEditing() else {
@@ -900,6 +919,67 @@ private struct PlainShellView: View {
     }
 }
 
+private struct ConflictDiffSheet: View {
+    let diff: PlainShellModel.ConflictDiff
+    let reloadAction: () -> Void
+    let keepMineAction: () -> Void
+    let closeAction: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Resolve Conflict")
+                    .font(.title2.weight(.semibold))
+                Text("Compare the disk version with your current \(diff.draftTitle.lowercased()) before deciding which one to keep.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+
+            HStack(alignment: .top, spacing: 16) {
+                diffColumn(title: "Disk Version", text: diff.diskText)
+                diffColumn(title: diff.draftTitle, text: diff.draftText)
+            }
+
+            HStack {
+                Button("Close") {
+                    closeAction()
+                }
+
+                Spacer()
+
+                Button("Reload from Disk") {
+                    reloadAction()
+                }
+
+                Button("Keep My Version") {
+                    keepMineAction()
+                }
+                .keyboardShortcut(.defaultAction)
+            }
+        }
+        .padding(20)
+        .frame(minWidth: 880, minHeight: 520)
+        .accessibilityIdentifier("plain.conflict.diffSheet")
+    }
+
+    private func diffColumn(title: String, text: String) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .font(.headline)
+
+            TextEditor(text: .constant(text))
+                .font(.body.monospaced())
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .stroke(.quaternary, lineWidth: 1)
+                )
+                .disabled(true)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
 private struct HighlightedText: View {
     let text: String
     let query: String
@@ -1050,6 +1130,19 @@ final class PlainShellModel: ObservableObject {
         case newTask(String)
         case inlineEdit(LineIdentity, String)
         case scratchPad(String)
+
+        var conflictDiffTitle: String {
+            switch self {
+            case .none:
+                return "Draft"
+            case .newTask:
+                return "New Task Draft"
+            case .inlineEdit:
+                return "Inline Edit Draft"
+            case .scratchPad:
+                return "Scratch Pad Draft"
+            }
+        }
     }
 
     enum ExternalChangeState: Equatable {
@@ -1078,6 +1171,13 @@ final class PlainShellModel: ObservableObject {
         let id: String
         let title: String?
         let rows: [Row]
+    }
+
+    struct ConflictDiff: Identifiable, Equatable {
+        let id = "todo-conflict-diff"
+        let draftTitle: String
+        let diskText: String
+        let draftText: String
     }
 
     @Published var selection: SidebarSelection = .inbox {
@@ -1111,6 +1211,7 @@ final class PlainShellModel: ObservableObject {
     @Published private(set) var projectCounts: [TagCount] = []
     @Published private(set) var contextCounts: [TagCount] = []
     @Published private(set) var isScratchPadPresented = false
+    @Published private(set) var presentedConflictDiff: ConflictDiff?
 
     private var hasLoaded = false
     private let preferences: PreferencesStore
@@ -1283,6 +1384,7 @@ final class PlainShellModel: ObservableObject {
         transientError = nil
         selectedRowID = nil
         isScratchPadPresented = false
+        presentedConflictDiff = nil
     }
 
     func updateDraftState(newTaskText: String, editingRowID: LineIdentity?, editingRawText: String) {
@@ -1370,6 +1472,7 @@ final class PlainShellModel: ObservableObject {
 
     func reloadAfterConflict() {
         do {
+            presentedConflictDiff = nil
             try reloadAllSnapshotsFromDisk()
             clearDraftStateAndRequestReset()
         } catch {
@@ -1383,6 +1486,7 @@ final class PlainShellModel: ObservableObject {
         }
 
         do {
+            presentedConflictDiff = nil
             let todoSnapshot = try synthesizedTodoSnapshotForCurrentDraft()
             let transaction = try store.write(todoSnapshot: todoSnapshot, doneSnapshot: archiveSnapshot ?? .empty)
             apply(transaction: transaction)
@@ -1392,6 +1496,30 @@ final class PlainShellModel: ObservableObject {
         } catch {
             transientError = error.localizedDescription
         }
+    }
+
+    func presentConflictDiff() {
+        guard hasExternalTodoConflict else {
+            return
+        }
+
+        do {
+            presentedConflictDiff = try buildConflictDiff()
+        } catch {
+            transientError = error.localizedDescription
+        }
+    }
+
+    func dismissConflictDiff() {
+        presentedConflictDiff = nil
+    }
+
+    func reloadFromConflictDiff() {
+        reloadAfterConflict()
+    }
+
+    func keepMineFromConflictDiff() {
+        keepMineAfterConflict()
     }
 
     func archiveCompletedTasks(undoManager: UndoManager?) {
@@ -1957,8 +2085,23 @@ final class PlainShellModel: ObservableObject {
     private func clearDraftStateAndRequestReset() {
         draftState = .none
         isScratchPadPresented = false
+        presentedConflictDiff = nil
         externalChangeState = .idle
         draftResetToken += 1
+    }
+
+    private func buildConflictDiff() throws -> ConflictDiff {
+        guard let store else {
+            throw CocoaError(.fileReadUnknown)
+        }
+
+        let diskSnapshots = try store.reloadAll()
+        let draftSnapshot = try synthesizedTodoSnapshotForCurrentDraft()
+        return ConflictDiff(
+            draftTitle: draftState.conflictDiffTitle,
+            diskText: TodoSerializer.serialize(diskSnapshots.todo),
+            draftText: TodoSerializer.serialize(draftSnapshot)
+        )
     }
 
     private func registerUndo(actionName: String, transaction: WriteTransaction, undoManager: UndoManager?) {

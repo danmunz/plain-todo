@@ -1086,6 +1086,146 @@ final class PlainShellModelTests: XCTestCase {
         )
     }
 
+    func testConflictDiffPayloadUsesPendingNewTaskDraft() throws {
+        let temporaryDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: temporaryDirectory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: temporaryDirectory) }
+
+        let todoURL = temporaryDirectory.appendingPathComponent("todo.txt")
+        try "Call accountant @phone +taxes\n".write(to: todoURL, atomically: true, encoding: .utf8)
+
+        let model = PlainShellModel()
+        model.open(url: todoURL)
+        model.updateDraftState(newTaskText: "Review parser bootstrap +plain @work", editingRowID: nil, editingRawText: "")
+
+        try "Call accountant @phone +moved\n".write(to: todoURL, atomically: true, encoding: .utf8)
+        model.handleTodoFileChangedExternally()
+        model.presentConflictDiff()
+
+        XCTAssertEqual(model.presentedConflictDiff?.draftTitle, "New Task Draft")
+        XCTAssertEqual(model.presentedConflictDiff?.diskText, "Call accountant @phone +moved\n")
+        XCTAssertEqual(model.presentedConflictDiff?.draftText, "Call accountant @phone +taxes\nReview parser bootstrap +plain @work\n")
+    }
+
+    func testConflictDiffPayloadUsesPendingInlineEditDraft() throws {
+        let temporaryDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: temporaryDirectory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: temporaryDirectory) }
+
+        let todoURL = temporaryDirectory.appendingPathComponent("todo.txt")
+        try "Call accountant @phone +taxes\n".write(to: todoURL, atomically: true, encoding: .utf8)
+
+        let model = PlainShellModel()
+        model.open(url: todoURL)
+        let selectedIdentity = try XCTUnwrap(model.visibleRows.first?.id)
+        model.updateDraftState(newTaskText: "", editingRowID: selectedIdentity, editingRawText: "Call accountant @phone +taxes due:2026-05-29")
+
+        try "Call accountant @phone +moved\n".write(to: todoURL, atomically: true, encoding: .utf8)
+        model.handleTodoFileChangedExternally()
+        model.presentConflictDiff()
+
+        XCTAssertEqual(model.presentedConflictDiff?.draftTitle, "Inline Edit Draft")
+        XCTAssertEqual(model.presentedConflictDiff?.diskText, "Call accountant @phone +moved\n")
+        XCTAssertEqual(model.presentedConflictDiff?.draftText, "Call accountant @phone +taxes due:2026-05-29\n")
+    }
+
+    func testConflictDiffPayloadUsesPendingScratchPadDraft() throws {
+        let temporaryDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: temporaryDirectory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: temporaryDirectory) }
+
+        let todoURL = temporaryDirectory.appendingPathComponent("todo.txt")
+        try "Call accountant @phone +taxes\n".write(to: todoURL, atomically: true, encoding: .utf8)
+
+        let model = PlainShellModel()
+        model.open(url: todoURL)
+        _ = model.beginScratchPadEditing()
+        model.updateScratchPadDraft("Call accountant @phone +taxes due:2026-05-29\nReview parser bootstrap +plain @work\n")
+
+        try "Call accountant @phone +moved\n".write(to: todoURL, atomically: true, encoding: .utf8)
+        model.handleTodoFileChangedExternally()
+        model.presentConflictDiff()
+
+        XCTAssertEqual(model.presentedConflictDiff?.draftTitle, "Scratch Pad Draft")
+        XCTAssertEqual(model.presentedConflictDiff?.diskText, "Call accountant @phone +moved\n")
+        XCTAssertEqual(model.presentedConflictDiff?.draftText, "Call accountant @phone +taxes due:2026-05-29\nReview parser bootstrap +plain @work\n")
+    }
+
+    func testDismissConflictDiffLeavesConflictStateUnchanged() throws {
+        let temporaryDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: temporaryDirectory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: temporaryDirectory) }
+
+        let todoURL = temporaryDirectory.appendingPathComponent("todo.txt")
+        try "Call accountant @phone +taxes\n".write(to: todoURL, atomically: true, encoding: .utf8)
+
+        let model = PlainShellModel()
+        model.open(url: todoURL)
+        model.updateDraftState(newTaskText: "Review parser bootstrap +plain @work", editingRowID: nil, editingRawText: "")
+
+        try "Call accountant @phone +moved\n".write(to: todoURL, atomically: true, encoding: .utf8)
+        model.handleTodoFileChangedExternally()
+        model.presentConflictDiff()
+        model.dismissConflictDiff()
+
+        XCTAssertTrue(model.hasExternalTodoConflict)
+        XCTAssertNil(model.presentedConflictDiff)
+        XCTAssertEqual(try String(contentsOf: todoURL, encoding: .utf8), "Call accountant @phone +moved\n")
+    }
+
+    func testReloadFromConflictDiffClearsDraftAndAppliesDiskState() throws {
+        let temporaryDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: temporaryDirectory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: temporaryDirectory) }
+
+        let todoURL = temporaryDirectory.appendingPathComponent("todo.txt")
+        try "Call accountant @phone +taxes\n".write(to: todoURL, atomically: true, encoding: .utf8)
+
+        let model = PlainShellModel()
+        model.open(url: todoURL)
+        model.updateDraftState(newTaskText: "Review parser bootstrap +plain @work", editingRowID: nil, editingRawText: "")
+
+        try "Call accountant @phone +moved\n".write(to: todoURL, atomically: true, encoding: .utf8)
+        model.handleTodoFileChangedExternally()
+        model.presentConflictDiff()
+        model.reloadFromConflictDiff()
+
+        XCTAssertFalse(model.hasExternalTodoConflict)
+        XCTAssertNil(model.presentedConflictDiff)
+        XCTAssertEqual(model.visibleRows.map(\.rawText), ["Call accountant @phone +moved"])
+    }
+
+    func testKeepMineFromConflictDiffWritesSynthesizedDraft() throws {
+        let temporaryDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: temporaryDirectory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: temporaryDirectory) }
+
+        let todoURL = temporaryDirectory.appendingPathComponent("todo.txt")
+        try "Call accountant @phone +taxes\n".write(to: todoURL, atomically: true, encoding: .utf8)
+
+        let model = PlainShellModel()
+        model.open(url: todoURL)
+        model.updateDraftState(newTaskText: "Review parser bootstrap +plain @work", editingRowID: nil, editingRawText: "")
+
+        try "Call accountant @phone +moved\n".write(to: todoURL, atomically: true, encoding: .utf8)
+        model.handleTodoFileChangedExternally()
+        model.presentConflictDiff()
+        model.keepMineFromConflictDiff()
+
+        XCTAssertFalse(model.hasExternalTodoConflict)
+        XCTAssertNil(model.presentedConflictDiff)
+        XCTAssertEqual(
+            try String(contentsOf: todoURL, encoding: .utf8),
+            "Call accountant @phone +taxes\nReview parser bootstrap +plain @work\n"
+        )
+    }
+
     func testMoveRowReordersTasksAndSupportsUndo() throws {
         let temporaryDirectory = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
