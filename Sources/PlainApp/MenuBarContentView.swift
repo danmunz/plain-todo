@@ -21,28 +21,33 @@ struct MenuBarContentView: View {
             } label: {
                 menuRow(title: "Inbox", count: model.inboxCount)
             }
+            .accessibilityLabel("Inbox, \(model.inboxCount) tasks")
 
             Button {
                 select(.today)
             } label: {
                 menuRow(title: "Today", count: model.todayCount)
             }
+            .accessibilityLabel("Today, \(model.todayCount) tasks")
 
             Button {
                 select(.overdue)
             } label: {
                 menuRow(title: "Overdue", count: model.overdueCount)
             }
+            .accessibilityLabel("Overdue, \(model.overdueCount) tasks")
 
             Divider()
 
             Button("Quick Add") {
                 quickAddController.showPanel()
             }
+            .accessibilityLabel("Quick Add Task")
 
             Button("Open Plain") {
                 quickAddController.revealMainWindow()
             }
+            .accessibilityLabel("Open Main Window")
         }
         .padding(12)
         .frame(width: 260)

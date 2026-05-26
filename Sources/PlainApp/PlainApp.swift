@@ -85,6 +85,7 @@ struct PlainShellView: View {
                     }
                 }
             }
+            .accessibilityIdentifier("plain.sidebar")
             .navigationSplitViewColumnWidth(min: 220, ideal: 240)
         } detail: {
             Group {
@@ -287,6 +288,7 @@ struct PlainShellView: View {
                     .textFieldStyle(.roundedBorder)
                     .focused($focusedField, equals: .newTask)
                     .disabled(!model.isEditable)
+                    .accessibilityIdentifier("plain.add.textField")
                     .onSubmit {
                         guard !newTaskText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
                             return
@@ -305,6 +307,7 @@ struct PlainShellView: View {
                     newTaskText = ""
                 }
                 .disabled(!model.isEditable || newTaskText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .accessibilityIdentifier("plain.add.button")
             }
             .padding(12)
             .background(Color(nsColor: .controlBackgroundColor))
@@ -1094,6 +1097,8 @@ private struct SidebarRow: View {
             Text("\(count)")
                 .foregroundStyle(.secondary)
         }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(title), \(count) tasks")
     }
 }
 
