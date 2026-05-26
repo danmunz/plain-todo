@@ -957,6 +957,9 @@ final class PlainShellModel: ObservableObject {
 
     @Published var selection: SidebarSelection = .inbox {
         didSet {
+            if currentPersistSelection {
+                sessionRestore.setSelection(selection)
+            }
             if selection != .done {
                 sortMode = sortPreferences.sortMode(for: selection)
             }
@@ -984,16 +987,17 @@ final class PlainShellModel: ObservableObject {
     @Published private(set) var contextCounts: [TagCount] = []
 
     private var hasLoaded = false
-    private let userDefaults = UserDefaults.standard
-    private let persistedFilePathKey = "PlainBootstrapSelectedFilePath"
-    private let launchArguments = Set(ProcessInfo.processInfo.arguments)
     private let preferences: PreferencesStore
     private let sortPreferences: SortPreferenceStore
+    private let sessionRestore: SessionRestoreStore
+    private let launchArguments: [String]
+    private let isUITesting: Bool
     private var store: CoordinatedTodoStore?
     private var isPersistedSourceEditable = false
     private var currentSourceURL: URL?
     private var currentPersistSelection = false
     private var draftState: DraftState = .none
+    private var shouldRestoreSessionSelectionOnNextLoad = false
 
     var isEditable: Bool {
         isPersistedSourceEditable
@@ -1041,10 +1045,16 @@ final class PlainShellModel: ObservableObject {
 
     init(
         preferences: PreferencesStore = PreferencesStore(),
-        sortPreferences: SortPreferenceStore = SortPreferenceStore()
+        sortPreferences: SortPreferenceStore = SortPreferenceStore(),
+        sessionRestore: SessionRestoreStore = SessionRestoreStore(),
+        launchArguments: [String] = Array(CommandLine.arguments.dropFirst()),
+        isUITesting: Bool = ProcessInfo.processInfo.arguments.contains("--ui-testing")
     ) {
         self.preferences = preferences
         self.sortPreferences = sortPreferences
+        self.sessionRestore = sessionRestore
+        self.launchArguments = launchArguments
+        self.isUITesting = isUITesting
         self.sortMode = sortPreferences.sortMode(for: .inbox)
     }
 
@@ -1055,8 +1065,11 @@ final class PlainShellModel: ObservableObject {
 
         hasLoaded = true
 
-        if let initialURL = resolveInitialSourceURL() {
-            open(url: initialURL, persistSelection: initialURL.path != bundledSampleURL()?.path)
+        let launch = resolveInitialLaunch()
+        shouldRestoreSessionSelectionOnNextLoad = launch.restoreSelection
+
+        if let initialURL = launch.url {
+            open(url: initialURL, persistSelection: launch.persistSelection)
         }
     }
 
@@ -1438,36 +1451,35 @@ final class PlainShellModel: ObservableObject {
         setSearchQuery("")
     }
 
-    private func resolveInitialSourceURL() -> URL? {
-        if launchArguments.contains("--ui-testing") {
-            return nil
+    private func resolveInitialLaunch() -> (url: URL?, persistSelection: Bool, restoreSelection: Bool) {
+        if isUITesting {
+            return (nil, false, false)
         }
 
-        let arguments = Array(CommandLine.arguments.dropFirst())
-        if let inlineArgument = arguments.first(where: { $0.hasPrefix("--todo-file=") }) {
+        if let inlineArgument = launchArguments.first(where: { $0.hasPrefix("--todo-file=") }) {
             let path = String(inlineArgument.dropFirst("--todo-file=".count))
-            return URL(fileURLWithPath: NSString(string: path).expandingTildeInPath)
+            return (URL(fileURLWithPath: NSString(string: path).expandingTildeInPath), true, false)
         }
 
-        if let flagIndex = arguments.firstIndex(of: "--todo-file"),
-           arguments.indices.contains(flagIndex + 1)
+        if let flagIndex = launchArguments.firstIndex(of: "--todo-file"),
+           launchArguments.indices.contains(flagIndex + 1)
         {
-            let path = arguments[flagIndex + 1]
-            return URL(fileURLWithPath: NSString(string: path).expandingTildeInPath)
+            let path = launchArguments[flagIndex + 1]
+            return (URL(fileURLWithPath: NSString(string: path).expandingTildeInPath), true, false)
         }
 
-        if arguments.count == 1,
-           let providedPath = arguments.first,
+        if launchArguments.count == 1,
+           let providedPath = launchArguments.first,
            !providedPath.hasPrefix("-")
         {
-            return URL(fileURLWithPath: NSString(string: providedPath).expandingTildeInPath)
+            return (URL(fileURLWithPath: NSString(string: providedPath).expandingTildeInPath), true, false)
         }
 
-        if let persistedPath = userDefaults.string(forKey: persistedFilePathKey) {
-            return URL(fileURLWithPath: persistedPath)
+        if let restoredURL = sessionRestore.restoredSourceURL() {
+            return (restoredURL, true, true)
         }
 
-        return nil
+        return (nil, false, false)
     }
 
     private func bundledSampleURL() -> URL? {
@@ -1516,7 +1528,7 @@ final class PlainShellModel: ObservableObject {
         self.isPersistedSourceEditable = persistSelection && FileManager.default.isWritableFile(atPath: sourceURL.path)
 
         if persistSelection {
-            userDefaults.set(sourceURL.path, forKey: persistedFilePathKey)
+            sessionRestore.setSourceURL(sourceURL)
         }
 
         let indexedTasks = todoSnapshot.lines.enumerated().compactMap { index, line -> IndexedTask? in
@@ -1539,7 +1551,18 @@ final class PlainShellModel: ObservableObject {
         projectCounts = buildTagCounts(from: incompleteTasks, keyPath: \.task.projects)
         contextCounts = buildTagCounts(from: incompleteTasks, keyPath: \.task.contexts)
         sourceDescription = sourceLabel(for: sourceURL, snapshot: todoSnapshot)
-        refreshVisibleRows(tasks: indexedTasks)
+
+        if shouldRestoreSessionSelectionOnNextLoad {
+            shouldRestoreSessionSelectionOnNextLoad = false
+            let restoredSelection = validatedRestoredSelection() ?? .inbox
+            if selection != restoredSelection {
+                selection = restoredSelection
+            } else {
+                refreshVisibleRows(tasks: indexedTasks)
+            }
+        } else {
+            refreshVisibleRows(tasks: indexedTasks)
+        }
     }
 
     private func preparedNewTaskText(from rawText: String, referenceDate: Date = Date()) -> String {
@@ -1807,6 +1830,21 @@ final class PlainShellModel: ObservableObject {
         }
 
         return rows.filter { $0.rawText.localizedCaseInsensitiveContains(activeSearchQuery) }
+    }
+
+    private func validatedRestoredSelection() -> SidebarSelection? {
+        guard let restoredSelection = sessionRestore.restoredSelection() else {
+            return nil
+        }
+
+        switch restoredSelection {
+        case .inbox, .today, .overdue, .done:
+            return restoredSelection
+        case let .project(project):
+            return projectCounts.contains(where: { $0.name == project }) ? restoredSelection : .inbox
+        case let .context(context):
+            return contextCounts.contains(where: { $0.name == context }) ? restoredSelection : .inbox
+        }
     }
 
     private func buildVisibleGroups(from rows: [Row]) -> [RowGroup] {

@@ -18,6 +18,13 @@ final class PlainShellModelTests: XCTestCase {
         return (SortPreferenceStore(userDefaults: defaults), defaults, suiteName)
     }
 
+    private func makeSessionRestoreStore() -> (SessionRestoreStore, UserDefaults, String) {
+        let suiteName = "PlainSessionRestoreTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        return (SessionRestoreStore(userDefaults: defaults), defaults, suiteName)
+    }
+
     func testAddTaskRegistersUndoAndRestoresPreviousVisibleRows() throws {
         let temporaryDirectory = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
@@ -151,6 +158,137 @@ final class PlainShellModelTests: XCTestCase {
 
         let secondStore = PreferencesStore(userDefaults: defaults)
         XCTAssertFalse(secondStore.automaticallyAddCreationDate)
+    }
+
+    func testSessionRestoreStoreRoundTripsSourcePathAndSelection() {
+        let (sessionRestore, defaults, suiteName) = makeSessionRestoreStore()
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let sourceURL = URL(fileURLWithPath: "/tmp/plain-session-restore.txt")
+        sessionRestore.setSourceURL(sourceURL)
+        sessionRestore.setSelection(.context("work"))
+
+        XCTAssertEqual(sessionRestore.restoredSourceURL(), sourceURL)
+        XCTAssertEqual(sessionRestore.restoredSelection(), .context("work"))
+    }
+
+    func testInitialLoadRestoresSavedSourceAndSelection() throws {
+        let (sortPreferences, sortDefaults, sortSuiteName) = makeSortPreferenceStore()
+        defer { sortDefaults.removePersistentDomain(forName: sortSuiteName) }
+        let (sessionRestore, sessionDefaults, sessionSuiteName) = makeSessionRestoreStore()
+        defer { sessionDefaults.removePersistentDomain(forName: sessionSuiteName) }
+
+        let temporaryDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: temporaryDirectory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: temporaryDirectory) }
+
+        let todoURL = temporaryDirectory.appendingPathComponent("todo.txt")
+        try "Call accountant +finance\nReview parser +plain @work\n".write(to: todoURL, atomically: true, encoding: .utf8)
+
+        sessionRestore.setSourceURL(todoURL)
+        sessionRestore.setSelection(.project("plain"))
+        sortPreferences.setSortMode(.alphabetical, for: .project("plain"))
+
+        let model = PlainShellModel(
+            sortPreferences: sortPreferences,
+            sessionRestore: sessionRestore,
+            launchArguments: [],
+            isUITesting: false
+        )
+        model.loadInitialSnapshotIfNeeded()
+
+        XCTAssertEqual(model.selection, .project("plain"))
+        XCTAssertEqual(model.sortMode, .alphabetical)
+        XCTAssertEqual(model.visibleRows.map(\.rawText), ["Review parser +plain @work"])
+    }
+
+    func testInitialLoadFallsBackToInboxWhenSavedSelectionIsInvalid() throws {
+        let (sessionRestore, defaults, suiteName) = makeSessionRestoreStore()
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let temporaryDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: temporaryDirectory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: temporaryDirectory) }
+
+        let todoURL = temporaryDirectory.appendingPathComponent("todo.txt")
+        try "Call accountant +finance\nReview parser @work\n".write(to: todoURL, atomically: true, encoding: .utf8)
+
+        sessionRestore.setSourceURL(todoURL)
+        sessionRestore.setSelection(.project("plain"))
+
+        let model = PlainShellModel(sessionRestore: sessionRestore, launchArguments: [], isUITesting: false)
+        model.loadInitialSnapshotIfNeeded()
+
+        XCTAssertEqual(model.selection, .inbox)
+        XCTAssertEqual(model.visibleRows.count, 2)
+    }
+
+    func testExplicitLaunchArgumentOverridesStoredSessionSource() throws {
+        let (sessionRestore, defaults, suiteName) = makeSessionRestoreStore()
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let temporaryDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: temporaryDirectory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: temporaryDirectory) }
+
+        let restoredURL = temporaryDirectory.appendingPathComponent("restored.txt")
+        let explicitURL = temporaryDirectory.appendingPathComponent("explicit.txt")
+        try "Restored task\n".write(to: restoredURL, atomically: true, encoding: .utf8)
+        try "Explicit task\n".write(to: explicitURL, atomically: true, encoding: .utf8)
+
+        sessionRestore.setSourceURL(restoredURL)
+        sessionRestore.setSelection(.inbox)
+
+        let model = PlainShellModel(
+            sessionRestore: sessionRestore,
+            launchArguments: ["--todo-file", explicitURL.path],
+            isUITesting: false
+        )
+        model.loadInitialSnapshotIfNeeded()
+
+        XCTAssertEqual(model.visibleRows.map(\.rawText), ["Explicit task"])
+    }
+
+    func testUITestingLaunchSkipsSessionRestore() throws {
+        let (sessionRestore, defaults, suiteName) = makeSessionRestoreStore()
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let temporaryDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: temporaryDirectory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: temporaryDirectory) }
+
+        let todoURL = temporaryDirectory.appendingPathComponent("todo.txt")
+        try "Call accountant\n".write(to: todoURL, atomically: true, encoding: .utf8)
+        sessionRestore.setSourceURL(todoURL)
+
+        let model = PlainShellModel(sessionRestore: sessionRestore, launchArguments: [], isUITesting: true)
+        model.loadInitialSnapshotIfNeeded()
+
+        XCTAssertNil(model.snapshot)
+    }
+
+    func testNonPersistentOpenDoesNotWriteSessionRestoreState() throws {
+        let (sessionRestore, defaults, suiteName) = makeSessionRestoreStore()
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let temporaryDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: temporaryDirectory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: temporaryDirectory) }
+
+        let todoURL = temporaryDirectory.appendingPathComponent("todo.txt")
+        try "Review parser +plain\n".write(to: todoURL, atomically: true, encoding: .utf8)
+
+        let model = PlainShellModel(sessionRestore: sessionRestore)
+        model.open(url: todoURL, persistSelection: false)
+        model.selection = .project("plain")
+
+        XCTAssertNil(sessionRestore.restoredSourceURL())
+        XCTAssertNil(sessionRestore.restoredSelection())
     }
 
     func testSortModesReorderInboxRowsWithoutMutatingFileOrder() throws {
