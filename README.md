@@ -5,7 +5,7 @@ Plain is a native macOS todo.txt client. The repo now supports both a SwiftPM bo
 ## Current Shape
 
 - `PlainCore` contains the parser, serializer, mutation layer, and coordinated file store.
-- `PlainApp` is a SwiftUI macOS app shell with onboarding, last-file and last-filter session restore for normal launches, per-view persisted sort modes, grouped sorted task views, a transient Cmd+F search overlay with live filtering and match highlighting, natural-language due-date preview in the add bar, automatic creation-date insertion for new tasks, inline raw-line editing, keyboard selection, undo-backed add, complete, reprioritize, edit, delete, keyboard reorder, drag reorder, and archive flows, plus a read-only `done.txt` view, archive-behavior, creation-date, and show-completed preferences, and non-modal external-change conflict handling.
+- `PlainApp` is a SwiftUI macOS app shell with onboarding, last-file and last-filter session restore for normal launches, per-view persisted sort modes, grouped sorted task views, a transient Cmd+F search overlay with live filtering and match highlighting, natural-language due-date preview in the add bar, automatic creation-date insertion for new tasks, inline raw-line editing, a scratch-pad raw file toggle, keyboard selection, undo-backed add, complete, reprioritize, edit, delete, keyboard reorder, drag reorder, and archive flows, plus a read-only `done.txt` view, archive-behavior, creation-date, and show-completed preferences, and non-modal external-change conflict handling.
 - `PlainCoreTests`, `PlainAppTests`, and `PlainUITests` cover parser fidelity, coordinated file access, dual-file archive transactions, external-change handling, shell-model undo and selection behavior, and a basic app launch smoke path.
 
 ## Toolchain
@@ -66,7 +66,7 @@ The current bootstrap has working foundations but is not yet v1 complete:
 - PlainCore-first architecture
 - one coordinated read and write pipeline
 - last writable file and sidebar filter session restore, plus per-view persisted sort modes
-- inline raw-line editing, keyboard row selection, grouped sorted task views, Cmd+F live search, natural-language due-date preview for new tasks, automatic creation-date insertion for new tasks, persisted show-completed visibility, UndoManager-backed destructive edits, keyboard and drag reorder, coordinated archive-to-`done.txt`, archive-behavior, creation-date, and show-completed preferences, and reload-or-keep-mine conflict handling for external file changes
+- inline raw-line editing, scratch-pad raw file editing with parse-on-save rebuild, keyboard row selection, grouped sorted task views, Cmd+F live search, natural-language due-date preview for new tasks, automatic creation-date insertion for new tasks, persisted show-completed visibility, UndoManager-backed destructive edits, keyboard and drag reorder, coordinated archive-to-`done.txt`, archive-behavior, creation-date, and show-completed preferences, and reload-or-keep-mine conflict handling for external file changes
 - Xcode-native app, unit-test, and UI-test path
 - no database or hidden persistence
-- no widget, menu bar, quick-add, diff view, bulk actions, or scratch pad yet
+- no widget, menu bar, quick-add, diff view, or bulk actions yet

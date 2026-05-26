@@ -34,6 +34,7 @@ private struct PlainShellView: View {
     @State private var searchText = ""
     @State private var editingRowID: LineIdentity?
     @State private var editingRawText = ""
+    @State private var scratchPadText = ""
     @FocusState private var focusedField: FocusField?
 
     init(preferences: PreferencesStore = PreferencesStore()) {
@@ -102,6 +103,9 @@ private struct PlainShellView: View {
         .onChange(of: editingRawText) { _, updatedValue in
             model.updateDraftState(newTaskText: newTaskText, editingRowID: editingRowID, editingRawText: updatedValue)
         }
+        .onChange(of: scratchPadText) { _, updatedValue in
+            model.updateScratchPadDraft(updatedValue)
+        }
         .onChange(of: searchText) { _, updatedValue in
             model.setSearchQuery(updatedValue)
         }
@@ -137,6 +141,12 @@ private struct PlainShellView: View {
                 }
                 .keyboardShortcut("A", modifiers: [.command, .shift])
                 .disabled(!model.isEditable || model.archivableCompletedTaskCount == 0)
+
+                Button(model.isScratchPadPresented ? "Save & Return" : "Scratch Pad") {
+                    toggleScratchPad()
+                }
+                .keyboardShortcut("e")
+                .disabled(!model.canToggleScratchPad)
 
                 Picker("Sort", selection: Binding(get: { model.sortMode }, set: { model.setSortMode($0) })) {
                     ForEach(TaskSortMode.allCases) { sortMode in
@@ -213,7 +223,9 @@ private struct PlainShellView: View {
 
     private var detailView: some View {
         Group {
-            if model.selection == .done {
+            if model.isScratchPadPresented {
+                scratchPadDetailView
+            } else if model.selection == .done {
                 archiveDetailView
             } else {
                 activeTasksDetailView
@@ -589,6 +601,63 @@ private struct PlainShellView: View {
         }
     }
 
+    private var scratchPadDetailView: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .firstTextBaseline) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Scratch Pad")
+                        .font(.largeTitle.weight(.semibold))
+                    Text("Edit the full todo.txt file directly. Saving reparses and writes through the coordinated store.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+
+                Button("Cancel") {
+                    cancelScratchPad()
+                }
+
+                Button("Save") {
+                    model.commitScratchPad(undoManager: undoManager)
+                }
+                .disabled(!model.isEditable)
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 20)
+
+            if model.hasExternalTodoConflict {
+                conflictBanner
+                    .padding(.horizontal, 20)
+                    .padding(.top, 12)
+            }
+
+            if let transientError = model.transientError {
+                Text(transientError)
+                    .font(.caption)
+                    .foregroundStyle(.red)
+                    .padding(.horizontal, 20)
+                    .padding(.top, 8)
+            }
+
+            TextEditor(text: $scratchPadText)
+                .font(.body.monospaced())
+                .padding(16)
+                .background(Color(nsColor: .textBackgroundColor))
+                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .padding(20)
+
+            HStack {
+                Text(model.sourceDescription)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Spacer()
+            }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 12)
+        }
+    }
+
     private var conflictBanner: some View {
         HStack(spacing: 12) {
             Text(model.externalTodoConflictMessage)
@@ -644,7 +713,32 @@ private struct PlainShellView: View {
         newTaskText = ""
         editingRowID = nil
         editingRawText = ""
+        scratchPadText = ""
         focusedField = nil
+    }
+
+    private func toggleScratchPad() {
+        if model.isScratchPadPresented {
+            model.commitScratchPad(undoManager: undoManager)
+            if !model.isScratchPadPresented {
+                scratchPadText = ""
+            }
+            return
+        }
+
+        guard let rawText = model.beginScratchPadEditing() else {
+            return
+        }
+
+        editingRowID = nil
+        editingRawText = ""
+        focusedField = nil
+        scratchPadText = rawText
+    }
+
+    private func cancelScratchPad() {
+        model.cancelScratchPadEditing()
+        scratchPadText = ""
     }
 
     private var keyboardShortcutActions: some View {
@@ -926,6 +1020,7 @@ final class PlainShellModel: ObservableObject {
         case none
         case newTask(String)
         case inlineEdit(LineIdentity, String)
+        case scratchPad(String)
     }
 
     enum ExternalChangeState: Equatable {
@@ -986,6 +1081,7 @@ final class PlainShellModel: ObservableObject {
     @Published private(set) var activeSearchQuery = ""
     @Published private(set) var projectCounts: [TagCount] = []
     @Published private(set) var contextCounts: [TagCount] = []
+    @Published private(set) var isScratchPadPresented = false
 
     private var hasLoaded = false
     private let preferences: PreferencesStore
@@ -1028,6 +1124,10 @@ final class PlainShellModel: ObservableObject {
 
     var canDragReorder: Bool {
         selection == .inbox && sortMode == .fileOrder && !hasActiveSearch
+    }
+
+    var canToggleScratchPad: Bool {
+        isScratchPadPresented || (snapshot != nil && selection != .done && isEditable)
     }
 
     var archiveDescription: String {
@@ -1145,9 +1245,14 @@ final class PlainShellModel: ObservableObject {
         loadError = error.localizedDescription
         transientError = nil
         selectedRowID = nil
+        isScratchPadPresented = false
     }
 
     func updateDraftState(newTaskText: String, editingRowID: LineIdentity?, editingRawText: String) {
+        guard !isScratchPadPresented else {
+            return
+        }
+
         if let editingRowID {
             draftState = .inlineEdit(editingRowID, editingRawText)
             return
@@ -1158,6 +1263,50 @@ final class PlainShellModel: ObservableObject {
             draftState = .none
         } else {
             draftState = .newTask(newTaskText)
+        }
+    }
+
+    func beginScratchPadEditing() -> String? {
+        guard let snapshot else {
+            return nil
+        }
+
+        let rawText = TodoSerializer.serialize(snapshot)
+        isScratchPadPresented = true
+        draftState = .scratchPad(rawText)
+        return rawText
+    }
+
+    func updateScratchPadDraft(_ rawText: String) {
+        guard isScratchPadPresented else {
+            return
+        }
+
+        draftState = .scratchPad(rawText)
+    }
+
+    func cancelScratchPadEditing() {
+        isScratchPadPresented = false
+        draftState = .none
+        externalChangeState = .idle
+    }
+
+    func commitScratchPad(undoManager: UndoManager?) {
+        guard let store,
+              case let .scratchPad(rawText) = draftState
+        else {
+            return
+        }
+
+        do {
+            let transaction = try store.write(snapshot: TodoParser.parse(rawText))
+            apply(transaction: transaction)
+            registerUndo(actionName: "Edit File", transaction: transaction, undoManager: undoManager)
+            isScratchPadPresented = false
+            draftState = .none
+            transientError = nil
+        } catch {
+            transientError = error.localizedDescription
         }
     }
 
@@ -1737,11 +1886,14 @@ final class PlainShellModel: ObservableObject {
             }
 
             return try TaskMutation.replaceLine(with: rawText, at: lineIndex, in: snapshot)
+        case let .scratchPad(rawText):
+            return TodoParser.parse(rawText)
         }
     }
 
     private func clearDraftStateAndRequestReset() {
         draftState = .none
+        isScratchPadPresented = false
         externalChangeState = .idle
         draftResetToken += 1
     }

@@ -920,6 +920,100 @@ final class PlainShellModelTests: XCTestCase {
         XCTAssertEqual(try String(contentsOf: todoURL, encoding: .utf8), "Call accountant @phone +taxes due:2026-05-29\n")
     }
 
+    func testBeginScratchPadEditingUsesCurrentSerializedSnapshot() throws {
+        let temporaryDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: temporaryDirectory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: temporaryDirectory) }
+
+        let todoURL = temporaryDirectory.appendingPathComponent("todo.txt")
+        let contents = "Call accountant @phone +taxes\nReview parser bootstrap +plain @work\n"
+        try contents.write(to: todoURL, atomically: true, encoding: .utf8)
+
+        let model = PlainShellModel()
+        model.open(url: todoURL)
+
+        XCTAssertEqual(model.beginScratchPadEditing(), contents)
+        XCTAssertTrue(model.isScratchPadPresented)
+    }
+
+    func testCommitScratchPadWritesWholeFileAndRefreshesVisibleRows() throws {
+        let temporaryDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: temporaryDirectory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: temporaryDirectory) }
+
+        let todoURL = temporaryDirectory.appendingPathComponent("todo.txt")
+        try "Call accountant @phone +taxes\n".write(to: todoURL, atomically: true, encoding: .utf8)
+
+        let model = PlainShellModel()
+        let undoManager = UndoManager()
+        model.open(url: todoURL)
+        _ = model.beginScratchPadEditing()
+        model.updateScratchPadDraft("Call accountant @phone +taxes\nReview parser bootstrap +plain @work\n")
+
+        model.commitScratchPad(undoManager: undoManager)
+
+        XCTAssertFalse(model.isScratchPadPresented)
+        XCTAssertEqual(model.visibleRows.map(\.rawText), [
+            "Call accountant @phone +taxes",
+            "Review parser bootstrap +plain @work"
+        ])
+        XCTAssertEqual(try String(contentsOf: todoURL, encoding: .utf8), "Call accountant @phone +taxes\nReview parser bootstrap +plain @work\n")
+
+        undoManager.undo()
+
+        XCTAssertEqual(model.visibleRows.map(\.rawText), ["Call accountant @phone +taxes"])
+        XCTAssertEqual(try String(contentsOf: todoURL, encoding: .utf8), "Call accountant @phone +taxes\n")
+    }
+
+    func testScratchPadRoundTripsOpaqueLinesAndTrailingNewline() throws {
+        let temporaryDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: temporaryDirectory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: temporaryDirectory) }
+
+        let todoURL = temporaryDirectory.appendingPathComponent("todo.txt")
+        let contents = "Call accountant @phone +taxes\r\nnot todo ::: ???\n\n"
+        try Data(contents.utf8).write(to: todoURL)
+
+        let model = PlainShellModel()
+        model.open(url: todoURL)
+        _ = model.beginScratchPadEditing()
+        model.commitScratchPad(undoManager: nil)
+
+        XCTAssertEqual(try String(contentsOf: todoURL, encoding: .utf8), contents)
+    }
+
+    func testScratchPadConflictKeepMineWritesRawDraft() throws {
+        let temporaryDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: temporaryDirectory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: temporaryDirectory) }
+
+        let todoURL = temporaryDirectory.appendingPathComponent("todo.txt")
+        try "Call accountant @phone +taxes\n".write(to: todoURL, atomically: true, encoding: .utf8)
+
+        let model = PlainShellModel()
+        model.open(url: todoURL)
+        _ = model.beginScratchPadEditing()
+        model.updateScratchPadDraft("Call accountant @phone +taxes due:2026-05-29\nReview parser bootstrap +plain @work\n")
+
+        try "Call accountant @phone +moved\n".write(to: todoURL, atomically: true, encoding: .utf8)
+        model.handleTodoFileChangedExternally()
+
+        XCTAssertTrue(model.hasExternalTodoConflict)
+
+        model.keepMineAfterConflict()
+
+        XCTAssertFalse(model.hasExternalTodoConflict)
+        XCTAssertFalse(model.isScratchPadPresented)
+        XCTAssertEqual(
+            try String(contentsOf: todoURL, encoding: .utf8),
+            "Call accountant @phone +taxes due:2026-05-29\nReview parser bootstrap +plain @work\n"
+        )
+    }
+
     func testMoveRowReordersTasksAndSupportsUndo() throws {
         let temporaryDirectory = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
