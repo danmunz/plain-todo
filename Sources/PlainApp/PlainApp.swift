@@ -14,6 +14,7 @@ struct PlainApp: App {
     @StateObject private var preferences: PreferencesStore
     @StateObject private var model: PlainShellModel
     @StateObject private var quickAddController: QuickAddPanelController
+    private let isRunningTests: Bool
 
     init() {
         let preferences = PreferencesStore()
@@ -22,21 +23,20 @@ struct PlainApp: App {
         _preferences = StateObject(wrappedValue: preferences)
         _model = StateObject(wrappedValue: model)
         _quickAddController = StateObject(wrappedValue: quickAddController)
+        self.isRunningTests = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
     }
 
     var body: some Scene {
-        WindowGroup(id: "main") {
-            PlainShellView(model: model)
-                .background(MainWindowRegistrationView(controller: quickAddController))
-        }
-
-        Settings {
-            PreferencesView(preferences: preferences)
-        }
+        PlainAppScenes(
+            preferences: preferences,
+            model: model,
+            quickAddController: quickAddController,
+            isRunningTests: isRunningTests
+        )
     }
 }
 
-private struct PlainShellView: View {
+struct PlainShellView: View {
     @ObservedObject private var model: PlainShellModel
     @Environment(\.undoManager) private var undoManager
     @State private var isFileImporterPresented = false

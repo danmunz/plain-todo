@@ -38,10 +38,17 @@ final class PreferencesStore: ObservableObject {
         }
     }
 
+    @Published var showMenuBarItem: Bool {
+        didSet {
+            userDefaults.set(showMenuBarItem, forKey: showMenuBarItemKey)
+        }
+    }
+
     private let userDefaults: UserDefaults
     private let archiveBehaviorKey = "PlainArchiveBehavior"
     private let automaticallyAddCreationDateKey = "PlainAutomaticallyAddCreationDate"
     private let showCompletedTasksKey = "PlainShowCompletedTasks"
+    private let showMenuBarItemKey = "PlainShowMenuBarItem"
 
     init(userDefaults: UserDefaults = .standard) {
         self.userDefaults = userDefaults
@@ -64,6 +71,12 @@ final class PreferencesStore: ObservableObject {
         } else {
             self.showCompletedTasks = userDefaults.bool(forKey: showCompletedTasksKey)
         }
+
+        if userDefaults.object(forKey: showMenuBarItemKey) == nil {
+            self.showMenuBarItem = false
+        } else {
+            self.showMenuBarItem = userDefaults.bool(forKey: showMenuBarItemKey)
+        }
     }
 }
 
@@ -81,6 +94,7 @@ struct PreferencesView: View {
 
             Toggle("Automatically add creation date to new tasks", isOn: $preferences.automaticallyAddCreationDate)
             Toggle("Show completed tasks", isOn: $preferences.showCompletedTasks)
+            Toggle("Show menu bar item", isOn: $preferences.showMenuBarItem)
         }
         .padding(20)
         .frame(minWidth: 380)

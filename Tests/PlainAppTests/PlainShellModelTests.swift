@@ -174,6 +174,46 @@ final class PlainShellModelTests: XCTestCase {
         XCTAssertFalse(secondStore.showCompletedTasks)
     }
 
+    func testMenuBarPreferencePersistsAcrossStoreInstances() {
+        let suiteName = "MenuBarPreferenceTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let firstStore = PreferencesStore(userDefaults: defaults)
+        XCTAssertFalse(firstStore.showMenuBarItem)
+        firstStore.showMenuBarItem = true
+
+        let secondStore = PreferencesStore(userDefaults: defaults)
+        XCTAssertTrue(secondStore.showMenuBarItem)
+    }
+
+    func testModelExposesCountsAndSourceLabelUsedByMenuBar() throws {
+        let temporaryDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: temporaryDirectory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: temporaryDirectory) }
+
+        let calendar = Calendar(identifier: .gregorian)
+        let today = Date()
+        let yesterday = calendar.date(byAdding: .day, value: -1, to: today) ?? today
+        let formatter = DateFormatter()
+        formatter.calendar = calendar
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd"
+
+        let todoURL = temporaryDirectory.appendingPathComponent("todo.txt")
+        try "Call accountant due:\(formatter.string(from: today))\nReview parser due:\(formatter.string(from: yesterday))\nInbox cleanup\n".write(to: todoURL, atomically: true, encoding: .utf8)
+
+        let model = PlainShellModel()
+        model.open(url: todoURL)
+
+        XCTAssertEqual(model.inboxCount, 3)
+        XCTAssertEqual(model.todayCount, 1)
+        XCTAssertEqual(model.overdueCount, 1)
+        XCTAssertTrue(model.sourceDescription.contains("todo.txt"))
+    }
+
     func testSessionRestoreStoreRoundTripsSourcePathAndSelection() {
         let (sessionRestore, defaults, suiteName) = makeSessionRestoreStore()
         defer { defaults.removePersistentDomain(forName: suiteName) }
