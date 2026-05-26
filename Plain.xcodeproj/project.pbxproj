@@ -35,6 +35,7 @@
 		BED3890ADC573A574947D28F /* TodoSerializer.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0E190EF4603D5AD3528E1A7 /* TodoSerializer.swift */; };
 		CF623C887725732752705241 /* SessionRestoreStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D24B5F77A61C59156CA864A4 /* SessionRestoreStore.swift */; };
 		CFE2790ED0C792C6EB3E4D0A /* CoordinatedTodoStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 977C67E1763A75558845983E /* CoordinatedTodoStoreTests.swift */; };
+		D34417B3AF823E32AC16B81A /* QuickAddPanelController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7ED98B2DC5394AD5F61C6E04 /* QuickAddPanelController.swift */; };
 		E458B0654FDD930279AD7D68 /* roundtrip.txt in Resources */ = {isa = PBXBuildFile; fileRef = D08BC1DF22DCD8D99139809B /* roundtrip.txt */; };
 /* End PBXBuildFile section */
 
@@ -109,6 +110,7 @@
 		7159E50492A006589AA2699B /* WriteTransaction.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WriteTransaction.swift; sourceTree = "<group>"; };
 		71FE653BE91C0C109B93D6C9 /* PlainUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlainUITests.swift; sourceTree = "<group>"; };
 		7D51F145A39C103852A3747A /* sample.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = sample.txt; sourceTree = "<group>"; };
+		7ED98B2DC5394AD5F61C6E04 /* QuickAddPanelController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickAddPanelController.swift; sourceTree = "<group>"; };
 		8D8716BACF9516567A5E8E33 /* empty.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = empty.txt; sourceTree = "<group>"; };
 		9074C8EDC17EAC36F9AF7CD9 /* PlainApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlainApp.swift; sourceTree = "<group>"; };
 		977C67E1763A75558845983E /* CoordinatedTodoStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoordinatedTodoStoreTests.swift; sourceTree = "<group>"; };
@@ -152,6 +154,7 @@
 			children = (
 				9074C8EDC17EAC36F9AF7CD9 /* PlainApp.swift */,
 				BEE53DE05041E2F229C85657 /* PreferencesStore.swift */,
+				7ED98B2DC5394AD5F61C6E04 /* QuickAddPanelController.swift */,
 				D24B5F77A61C59156CA864A4 /* SessionRestoreStore.swift */,
 				AAC46F0B2392BCE31F3FF94F /* SortPreferenceStore.swift */,
 				B25E50A284EE64DC5D7EF455 /* Resources */,
@@ -416,6 +419,7 @@
 			files = (
 				8D3699BD63DC4CAEC95A7B94 /* PlainApp.swift in Sources */,
 				2D8B548967108D18AF2D0D90 /* PreferencesStore.swift in Sources */,
+				D34417B3AF823E32AC16B81A /* QuickAddPanelController.swift in Sources */,
 				CF623C887725732752705241 /* SessionRestoreStore.swift in Sources */,
 				AAC3DCF3D717401BE32BFE28 /* SortPreferenceStore.swift in Sources */,
 			);

@@ -1,0 +1,296 @@
+import AppKit
+import Carbon.HIToolbox
+import SwiftUI
+
+@MainActor
+final class QuickAddPanelController: ObservableObject {
+    @Published var inputText = "" {
+        didSet {
+            refreshPreview()
+            if errorMessage != nil {
+                errorMessage = nil
+                canRevealMainWindow = false
+            }
+        }
+    }
+    @Published private(set) var previewText: String?
+    @Published private(set) var errorMessage: String?
+    @Published private(set) var destinationDescription = "No writable todo.txt selected"
+    @Published private(set) var canRevealMainWindow = false
+
+    private let model: PlainShellModel
+    private var panel: QuickAddPanel?
+    nonisolated(unsafe) private var hotKeyRef: EventHotKeyRef?
+    nonisolated(unsafe) private var eventHandlerRef: EventHandlerRef?
+    private let hotKeyID: UInt32 = 1
+
+    var revealMainWindow: () -> Void = {
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    init(model: PlainShellModel) {
+        self.model = model
+        registerHotKey()
+    }
+
+    deinit {
+        if let hotKeyRef {
+            UnregisterEventHotKey(hotKeyRef)
+        }
+        if let eventHandlerRef {
+            RemoveEventHandler(eventHandlerRef)
+        }
+    }
+
+    func showPanel() {
+        model.loadInitialSnapshotIfNeeded()
+        inputText = ""
+        errorMessage = nil
+        previewText = nil
+        canRevealMainWindow = false
+        ensurePanel()
+        refreshPreview()
+        destinationDescription = model.quickAddDestinationDescription
+        panel?.center()
+        panel?.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    func hidePanel() {
+        panel?.orderOut(nil)
+        inputText = ""
+        errorMessage = nil
+        previewText = nil
+        canRevealMainWindow = false
+    }
+
+    func submit() {
+        do {
+            _ = try model.addTaskFromQuickAdd(rawText: inputText)
+            hidePanel()
+        } catch let error as PlainShellModel.QuickAddError {
+            handle(error: error)
+        } catch {
+            errorMessage = error.localizedDescription
+            canRevealMainWindow = false
+        }
+    }
+
+    func revealMainApp() {
+        hidePanel()
+        revealMainWindow()
+    }
+
+    private func handle(error: PlainShellModel.QuickAddError) {
+        switch error {
+        case .conflict:
+            hidePanel()
+            revealMainWindow()
+        case .noWritableFile:
+            errorMessage = error.localizedDescription
+            canRevealMainWindow = true
+            destinationDescription = model.quickAddDestinationDescription
+        case .emptyTask:
+            errorMessage = error.localizedDescription
+            canRevealMainWindow = false
+        }
+    }
+
+    private func refreshPreview() {
+        previewText = model.previewTextForNewTask(inputText)
+        destinationDescription = model.quickAddDestinationDescription
+    }
+
+    private func ensurePanel() {
+        guard panel == nil else {
+            updatePanelContent()
+            return
+        }
+
+        let panel = QuickAddPanel(
+            contentRect: NSRect(x: 0, y: 0, width: 560, height: 240),
+            styleMask: [.borderless],
+            backing: .buffered,
+            defer: false
+        )
+        panel.level = .floating
+        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        panel.isMovableByWindowBackground = true
+        panel.backgroundColor = .clear
+        panel.isOpaque = false
+        panel.hasShadow = true
+        panel.animationBehavior = .utilityWindow
+        self.panel = panel
+        updatePanelContent()
+    }
+
+    private func updatePanelContent() {
+        guard let panel else {
+            return
+        }
+
+        panel.contentView = NSHostingView(rootView: QuickAddPanelView(controller: self))
+    }
+
+    private func registerHotKey() {
+        var eventType = EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed))
+        InstallEventHandler(
+            GetApplicationEventTarget(),
+            { _, event, userData in
+                guard let userData, let event else {
+                    return noErr
+                }
+
+                let controller = Unmanaged<QuickAddPanelController>.fromOpaque(userData).takeUnretainedValue()
+                var hotKeyID = EventHotKeyID()
+                let status = GetEventParameter(
+                    event,
+                    EventParamName(kEventParamDirectObject),
+                    EventParamType(typeEventHotKeyID),
+                    nil,
+                    MemoryLayout<EventHotKeyID>.size,
+                    nil,
+                    &hotKeyID
+                )
+
+                guard status == noErr, hotKeyID.id == controller.hotKeyID else {
+                    return noErr
+                }
+
+                Task { @MainActor in
+                    controller.showPanel()
+                }
+                return noErr
+            },
+            1,
+            &eventType,
+            Unmanaged.passUnretained(self).toOpaque(),
+            &eventHandlerRef
+        )
+
+        let carbonHotKeyID = EventHotKeyID(signature: OSType(0x504C4149), id: hotKeyID)
+        RegisterEventHotKey(
+            UInt32(kVK_ANSI_T),
+            UInt32(controlKey | optionKey),
+            carbonHotKeyID,
+            GetApplicationEventTarget(),
+            0,
+            &hotKeyRef
+        )
+    }
+}
+
+private final class QuickAddPanel: NSPanel {
+    override var canBecomeKey: Bool { true }
+    override var canBecomeMain: Bool { false }
+    override func cancelOperation(_ sender: Any?) {
+        orderOut(sender)
+    }
+}
+
+private struct QuickAddPanelView: View {
+    @ObservedObject var controller: QuickAddPanelController
+    @FocusState private var isInputFocused: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .firstTextBaseline) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Quick Add")
+                        .font(.title2.weight(.semibold))
+                    Text(controller.destinationDescription)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+
+                Text("Ctrl+Opt+T")
+                    .font(.caption.monospaced())
+                    .foregroundStyle(.secondary)
+            }
+
+            TextField("Capture a task...", text: $controller.inputText)
+                .textFieldStyle(.roundedBorder)
+                .font(.title3)
+                .focused($isInputFocused)
+                .onSubmit {
+                    controller.submit()
+                }
+
+            if let previewText = controller.previewText {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Preview")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    Text(previewText)
+                        .font(.caption.monospaced())
+                        .textSelection(.enabled)
+                }
+                .padding(10)
+                .background(.background.opacity(0.75))
+                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            }
+
+            if let errorMessage = controller.errorMessage {
+                HStack(spacing: 8) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.orange)
+                    Text(errorMessage)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                }
+            }
+
+            HStack {
+                Button("Cancel") {
+                    controller.hidePanel()
+                }
+                .keyboardShortcut(.cancelAction)
+
+                if controller.canRevealMainWindow {
+                    Button("Open Main Window") {
+                        controller.revealMainApp()
+                    }
+                }
+
+                Spacer()
+
+                Button("Add Task") {
+                    controller.submit()
+                }
+                .keyboardShortcut(.defaultAction)
+                .disabled(controller.inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+        }
+        .padding(20)
+        .frame(width: 560)
+        .background(.regularMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(.quaternary, lineWidth: 1)
+        }
+        .padding(12)
+        .onAppear {
+            isInputFocused = true
+        }
+    }
+}
+
+struct MainWindowRegistrationView: View {
+    @ObservedObject var controller: QuickAddPanelController
+    @Environment(\.openWindow) private var openWindow
+
+    var body: some View {
+        Color.clear
+            .frame(width: 0, height: 0)
+            .onAppear {
+                controller.revealMainWindow = {
+                    NSApp.activate(ignoringOtherApps: true)
+                    openWindow(id: "main")
+                }
+            }
+    }
+}

@@ -967,6 +967,78 @@ final class PlainShellModelTests: XCTestCase {
         XCTAssertEqual(try String(contentsOf: todoURL, encoding: .utf8), "Call accountant @phone +taxes\n")
     }
 
+    func testQuickAddUsesSameNaturalLanguageTransformationAsMainAddBar() throws {
+        let temporaryDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: temporaryDirectory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: temporaryDirectory) }
+
+        let todoURL = temporaryDirectory.appendingPathComponent("todo.txt")
+        try "Call accountant @phone +taxes\n".write(to: todoURL, atomically: true, encoding: .utf8)
+
+        let model = PlainShellModel()
+        model.open(url: todoURL)
+
+        let previewText = try XCTUnwrap(model.previewTextForNewTask("Review PR tomorrow @work +shipping"))
+        let writtenText = try model.addTaskFromQuickAdd(rawText: "Review PR tomorrow @work +shipping")
+
+        XCTAssertEqual(writtenText, previewText)
+        XCTAssertEqual(model.visibleRows.last?.rawText, previewText)
+        XCTAssertTrue(try String(contentsOf: todoURL, encoding: .utf8).contains(previewText))
+    }
+
+    func testQuickAddRespectsCreationDatePreference() throws {
+        let (preferences, defaults, suiteName) = makePreferencesStore()
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        preferences.automaticallyAddCreationDate = false
+
+        let temporaryDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: temporaryDirectory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: temporaryDirectory) }
+
+        let todoURL = temporaryDirectory.appendingPathComponent("todo.txt")
+        try "Call accountant @phone +taxes\n".write(to: todoURL, atomically: true, encoding: .utf8)
+
+        let model = PlainShellModel(preferences: preferences)
+        model.open(url: todoURL)
+
+        let writtenText = try model.addTaskFromQuickAdd(rawText: "Review parser bootstrap +plain @work")
+
+        XCTAssertEqual(writtenText, "Review parser bootstrap +plain @work")
+        XCTAssertEqual(model.visibleRows.last?.rawText, "Review parser bootstrap +plain @work")
+    }
+
+    func testQuickAddFailsWithoutWritableSource() {
+        let model = PlainShellModel()
+
+        XCTAssertThrowsError(try model.addTaskFromQuickAdd(rawText: "Review parser bootstrap +plain @work")) { error in
+            XCTAssertEqual(error as? PlainShellModel.QuickAddError, .noWritableFile)
+        }
+    }
+
+    func testQuickAddIsBlockedByActiveConflict() throws {
+        let temporaryDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: temporaryDirectory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: temporaryDirectory) }
+
+        let todoURL = temporaryDirectory.appendingPathComponent("todo.txt")
+        try "Call accountant @phone +taxes\n".write(to: todoURL, atomically: true, encoding: .utf8)
+
+        let model = PlainShellModel()
+        model.open(url: todoURL)
+        let selectedIdentity = try XCTUnwrap(model.visibleRows.first?.id)
+        model.updateDraftState(newTaskText: "", editingRowID: selectedIdentity, editingRawText: "Call accountant @phone +taxes due:2026-05-29")
+
+        try "Call accountant @phone +moved\n".write(to: todoURL, atomically: true, encoding: .utf8)
+        model.handleTodoFileChangedExternally()
+
+        XCTAssertThrowsError(try model.addTaskFromQuickAdd(rawText: "Review parser bootstrap +plain @work")) { error in
+            XCTAssertEqual(error as? PlainShellModel.QuickAddError, .conflict)
+        }
+    }
+
     func testScratchPadRoundTripsOpaqueLinesAndTrailingNewline() throws {
         let temporaryDirectory = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)

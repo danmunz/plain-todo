@@ -11,11 +11,23 @@ private enum FocusField: Hashable {
 
 @main
 struct PlainApp: App {
-    @StateObject private var preferences = PreferencesStore()
+    @StateObject private var preferences: PreferencesStore
+    @StateObject private var model: PlainShellModel
+    @StateObject private var quickAddController: QuickAddPanelController
+
+    init() {
+        let preferences = PreferencesStore()
+        let model = PlainShellModel(preferences: preferences)
+        let quickAddController = QuickAddPanelController(model: model)
+        _preferences = StateObject(wrappedValue: preferences)
+        _model = StateObject(wrappedValue: model)
+        _quickAddController = StateObject(wrappedValue: quickAddController)
+    }
 
     var body: some Scene {
-        WindowGroup {
-            PlainShellView(preferences: preferences)
+        WindowGroup(id: "main") {
+            PlainShellView(model: model)
+                .background(MainWindowRegistrationView(controller: quickAddController))
         }
 
         Settings {
@@ -25,7 +37,7 @@ struct PlainApp: App {
 }
 
 private struct PlainShellView: View {
-    @StateObject private var model: PlainShellModel
+    @ObservedObject private var model: PlainShellModel
     @Environment(\.undoManager) private var undoManager
     @State private var isFileImporterPresented = false
     @State private var isArchiveConfirmationPresented = false
@@ -37,8 +49,8 @@ private struct PlainShellView: View {
     @State private var scratchPadText = ""
     @FocusState private var focusedField: FocusField?
 
-    init(preferences: PreferencesStore = PreferencesStore()) {
-        _model = StateObject(wrappedValue: PlainShellModel(preferences: preferences))
+    init(model: PlainShellModel) {
+        _model = ObservedObject(wrappedValue: model)
     }
 
     var body: some View {
@@ -1016,6 +1028,23 @@ enum SidebarSelection: Hashable {
 
 @MainActor
 final class PlainShellModel: ObservableObject {
+    enum QuickAddError: LocalizedError, Equatable {
+        case emptyTask
+        case noWritableFile
+        case conflict
+
+        var errorDescription: String? {
+            switch self {
+            case .emptyTask:
+                return "Enter a task before submitting quick-add."
+            case .noWritableFile:
+                return "Open a writable todo.txt file before using quick-add."
+            case .conflict:
+                return "Resolve the current todo.txt conflict in the main window before using quick-add."
+            }
+        }
+    }
+
     enum DraftState: Equatable {
         case none
         case newTask(String)
@@ -1144,6 +1173,14 @@ final class PlainShellModel: ObservableObject {
         }
 
         return visibleRows.first { $0.id == selectedRowID }
+    }
+
+    var quickAddDestinationDescription: String {
+        guard let currentSourceURL else {
+            return "No writable todo.txt selected"
+        }
+
+        return currentSourceURL.lastPathComponent
     }
 
     init(
@@ -1389,6 +1426,32 @@ final class PlainShellModel: ObservableObject {
         } catch {
             transientError = error.localizedDescription
         }
+    }
+
+    @discardableResult
+    func addTaskFromQuickAdd(rawText: String) throws -> String {
+        loadInitialSnapshotIfNeeded()
+
+        let trimmedText = rawText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedText.isEmpty else {
+            throw QuickAddError.emptyTask
+        }
+
+        guard !hasExternalTodoConflict else {
+            throw QuickAddError.conflict
+        }
+
+        guard isEditable, let store else {
+            throw QuickAddError.noWritableFile
+        }
+
+        let transformedText = preparedNewTaskText(from: rawText)
+        let transaction = try store.appendTask(rawText: transformedText)
+        apply(transaction: transaction)
+        selectedRowID = transaction.updatedSnapshot.lines.last?.identity
+        draftState = .none
+        transientError = nil
+        return transformedText
     }
 
     func toggleCompletion(lineIdentity: LineIdentity, undoManager: UndoManager?) {
