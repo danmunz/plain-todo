@@ -669,4 +669,63 @@ final class PlainShellModelTests: XCTestCase {
             "Schedule dentist @phone +health"
         ])
     }
+
+    func testMoveVisibleRowsReordersFlatInboxAndSupportsUndo() throws {
+        let temporaryDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: temporaryDirectory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: temporaryDirectory) }
+
+        let todoURL = temporaryDirectory.appendingPathComponent("todo.txt")
+        try "Call accountant @phone +taxes\nx 2026-05-20 archived item\nReview parser bootstrap +plain @work\nSchedule dentist @phone +health\n".write(to: todoURL, atomically: true, encoding: .utf8)
+
+        let model = PlainShellModel()
+        let undoManager = UndoManager()
+        model.open(url: todoURL)
+
+        model.moveVisibleRows(fromOffsets: IndexSet(integer: 0), toOffset: 2, undoManager: undoManager)
+
+        XCTAssertEqual(model.visibleRows.map(\.rawText), [
+            "Review parser bootstrap +plain @work",
+            "Call accountant @phone +taxes",
+            "Schedule dentist @phone +health"
+        ])
+        XCTAssertEqual(try String(contentsOf: todoURL, encoding: .utf8), "Review parser bootstrap +plain @work\nx 2026-05-20 archived item\nCall accountant @phone +taxes\nSchedule dentist @phone +health\n")
+
+        undoManager.undo()
+
+        XCTAssertEqual(model.visibleRows.map(\.rawText), [
+            "Call accountant @phone +taxes",
+            "Review parser bootstrap +plain @work",
+            "Schedule dentist @phone +health"
+        ])
+    }
+
+    func testInteractiveReorderIsLimitedToFlatInboxFileOrder() throws {
+        let (sortPreferences, defaults, suiteName) = makeSortPreferenceStore()
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let temporaryDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: temporaryDirectory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: temporaryDirectory) }
+
+        let todoURL = temporaryDirectory.appendingPathComponent("todo.txt")
+        try "alpha @work\nbeta @home\n".write(to: todoURL, atomically: true, encoding: .utf8)
+
+        let model = PlainShellModel(sortPreferences: sortPreferences)
+        model.open(url: todoURL)
+        XCTAssertTrue(model.canDragReorder)
+
+        model.setSearchQuery("alpha")
+        XCTAssertFalse(model.canDragReorder)
+
+        model.clearSearch()
+        model.setSortMode(.priority)
+        XCTAssertFalse(model.canDragReorder)
+
+        model.setSortMode(.fileOrder)
+        model.selection = .context("work")
+        XCTAssertFalse(model.canDragReorder)
+    }
 }

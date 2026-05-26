@@ -275,18 +275,27 @@ private struct PlainShellView: View {
             }
 
             List(selection: $model.selectedRowID) {
-                ForEach(model.visibleGroups) { group in
-                    if let title = group.title {
-                        Section {
+                if model.canDragReorder, let flatGroup = model.visibleGroups.first {
+                    ForEach(flatGroup.rows) { row in
+                        activeTaskRow(row)
+                    }
+                    .onMove { offsets, destination in
+                        model.moveVisibleRows(fromOffsets: offsets, toOffset: destination, undoManager: undoManager)
+                    }
+                } else {
+                    ForEach(model.visibleGroups) { group in
+                        if let title = group.title {
+                            Section {
+                                ForEach(group.rows) { row in
+                                    activeTaskRow(row)
+                                }
+                            } header: {
+                                GroupHeader(title: title)
+                            }
+                        } else {
                             ForEach(group.rows) { row in
                                 activeTaskRow(row)
                             }
-                        } header: {
-                            GroupHeader(title: title)
-                        }
-                    } else {
-                        ForEach(group.rows) { row in
-                            activeTaskRow(row)
                         }
                     }
                 }
@@ -978,6 +987,10 @@ final class PlainShellModel: ObservableObject {
         !activeSearchQuery.isEmpty
     }
 
+    var canDragReorder: Bool {
+        selection == .inbox && sortMode == .fileOrder && !hasActiveSearch
+    }
+
     var archiveDescription: String {
         guard let currentSourceURL else {
             return "done.txt"
@@ -1258,6 +1271,56 @@ final class PlainShellModel: ObservableObject {
                 ?? transaction.updatedSnapshot.lineIndex(for: lineIdentity).flatMap { transaction.updatedSnapshot.lines[$0].identity }
                 ?? selectedRowID
             registerUndo(actionName: offset < 0 ? "Move Task Up" : "Move Task Down", transaction: transaction, undoManager: undoManager)
+            transientError = nil
+        } catch {
+            transientError = error.localizedDescription
+        }
+    }
+
+    func moveVisibleRows(fromOffsets offsets: IndexSet, toOffset destination: Int, undoManager: UndoManager?) {
+        guard canDragReorder,
+              let store,
+              let snapshot,
+              !visibleRows.isEmpty
+        else {
+            return
+        }
+
+        var reorderedRows = visibleRows
+        reorderedRows.move(fromOffsets: offsets, toOffset: destination)
+
+        let movedIdentity = offsets.first.flatMap { visibleRows[$0].id }
+        let visibleIdentities = Set(visibleRows.map(\.id))
+        let reorderedVisibleLines = reorderedRows.compactMap { row in
+            snapshot.lines.first { $0.identity == row.id }
+        }
+
+        guard reorderedVisibleLines.count == visibleRows.count else {
+            return
+        }
+
+        var nextVisibleIndex = 0
+        let reorderedSnapshot = TodoFileSnapshot(
+            lines: snapshot.lines.map { line in
+                guard visibleIdentities.contains(line.identity) else {
+                    return line
+                }
+
+                defer { nextVisibleIndex += 1 }
+                return reorderedVisibleLines[nextVisibleIndex]
+            },
+            preferredLineEnding: snapshot.preferredLineEnding,
+            containsMixedLineEndings: snapshot.containsMixedLineEndings,
+            hasTrailingNewline: snapshot.hasTrailingNewline
+        )
+
+        do {
+            let transaction = try store.write(snapshot: reorderedSnapshot)
+            apply(transaction: transaction)
+            if let movedIdentity {
+                selectedRowID = transaction.updatedSnapshot.lines.first(where: { $0.identity == movedIdentity })?.identity ?? selectedRowID
+            }
+            registerUndo(actionName: "Reorder Tasks", transaction: transaction, undoManager: undoManager)
             transientError = nil
         } catch {
             transientError = error.localizedDescription
