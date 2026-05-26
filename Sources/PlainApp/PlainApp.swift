@@ -2,22 +2,39 @@ import PlainCore
 import SwiftUI
 import UniformTypeIdentifiers
 
+private enum FocusField: Hashable {
+    case newTask
+    case inlineEdit
+}
+
 @main
 struct PlainApp: App {
+    @StateObject private var preferences = PreferencesStore()
+
     var body: some Scene {
         WindowGroup {
-            PlainShellView()
+            PlainShellView(preferences: preferences)
+        }
+
+        Settings {
+            PreferencesView(preferences: preferences)
         }
     }
 }
 
 private struct PlainShellView: View {
-    @StateObject private var model = PlainShellModel()
+    @StateObject private var model: PlainShellModel
+    @Environment(\.undoManager) private var undoManager
     @State private var isFileImporterPresented = false
+    @State private var isArchiveConfirmationPresented = false
     @State private var newTaskText = ""
     @State private var editingRowID: LineIdentity?
     @State private var editingRawText = ""
-    @FocusState private var isEditingFieldFocused: Bool
+    @FocusState private var focusedField: FocusField?
+
+    init(preferences: PreferencesStore = PreferencesStore()) {
+        _model = StateObject(wrappedValue: PlainShellModel(preferences: preferences))
+    }
 
     var body: some View {
         NavigationSplitView {
@@ -72,6 +89,18 @@ private struct PlainShellView: View {
             }
         }
         .frame(minWidth: 760, minHeight: 440)
+        .onChange(of: newTaskText) { _, updatedValue in
+            model.updateDraftState(newTaskText: updatedValue, editingRowID: editingRowID, editingRawText: editingRawText)
+        }
+        .onChange(of: editingRowID) { _, updatedValue in
+            model.updateDraftState(newTaskText: newTaskText, editingRowID: updatedValue, editingRawText: editingRawText)
+        }
+        .onChange(of: editingRawText) { _, updatedValue in
+            model.updateDraftState(newTaskText: newTaskText, editingRowID: editingRowID, editingRawText: updatedValue)
+        }
+        .onChange(of: model.draftResetToken) { _, _ in
+            resetDraftUI()
+        }
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
                 Button("Open") {
@@ -81,7 +110,44 @@ private struct PlainShellView: View {
                 Button("Use Sample") {
                     model.loadBundledSample()
                 }
+
+                Button("New Task") {
+                    focusedField = .newTask
+                }
+                .keyboardShortcut("n")
+
+                Button("Toggle Complete") {
+                    guard let selectedRowID = model.selectedRowID else {
+                        return
+                    }
+
+                    model.toggleCompletion(lineIdentity: selectedRowID, undoManager: undoManager)
+                }
+                .keyboardShortcut("d")
+
+                Button("Archive Completed") {
+                    isArchiveConfirmationPresented = true
+                }
+                .keyboardShortcut("A", modifiers: [.command, .shift])
+                .disabled(!model.isEditable || model.archivableCompletedTaskCount == 0)
+
+                Picker("Sort", selection: Binding(get: { model.sortMode }, set: { model.setSortMode($0) })) {
+                    ForEach(TaskSortMode.allCases) { sortMode in
+                        Text(sortMode.title).tag(sortMode)
+                    }
+                }
+                .pickerStyle(.menu)
+                .disabled(model.selection == .done)
             }
+        }
+        .alert(
+            "Archive \(model.archivableCompletedTaskCount) completed tasks to done.txt?",
+            isPresented: $isArchiveConfirmationPresented
+        ) {
+            Button("Archive") {
+                model.archiveCompletedTasks(undoManager: undoManager)
+            }
+            Button("Cancel", role: .cancel) {}
         }
         .fileImporter(
             isPresented: $isFileImporterPresented,
@@ -110,12 +176,25 @@ private struct PlainShellView: View {
             message: "Start with an existing todo.txt file, or load the bundled sample while the bootstrap shell is still read-only.",
             primaryActionTitle: "Open an existing file",
             primaryAction: { isFileImporterPresented = true },
+            primaryActionAccessibilityIdentifier: "plain.onboarding.open",
             secondaryActionTitle: "Use bundled sample",
-            secondaryAction: { model.loadBundledSample() }
+            secondaryAction: { model.loadBundledSample() },
+            secondaryActionAccessibilityIdentifier: "plain.onboarding.sample"
         )
+        .accessibilityIdentifier("plain.onboarding")
     }
 
     private var detailView: some View {
+        Group {
+            if model.selection == .done {
+                archiveDetailView
+            } else {
+                activeTasksDetailView
+            }
+        }
+    }
+
+    private var activeTasksDetailView: some View {
         VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 6) {
                 Text("Plain")
@@ -133,16 +212,23 @@ private struct PlainShellView: View {
             .padding(.horizontal, 20)
             .padding(.top, 20)
 
+            if model.hasExternalTodoConflict {
+                conflictBanner
+                    .padding(.horizontal, 20)
+                    .padding(.top, 12)
+            }
+
             HStack(spacing: 12) {
                 TextField("Add a task...", text: $newTaskText)
                     .textFieldStyle(.roundedBorder)
+                    .focused($focusedField, equals: .newTask)
                     .disabled(!model.isEditable)
                     .onSubmit {
                         guard !newTaskText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
                             return
                         }
 
-                        model.addTask(rawText: newTaskText)
+                        model.addTask(rawText: newTaskText, undoManager: undoManager)
                         newTaskText = ""
                     }
 
@@ -151,7 +237,7 @@ private struct PlainShellView: View {
                         return
                     }
 
-                    model.addTask(rawText: newTaskText)
+                    model.addTask(rawText: newTaskText, undoManager: undoManager)
                     newTaskText = ""
                 }
                 .disabled(!model.isEditable || newTaskText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
@@ -170,95 +256,134 @@ private struct PlainShellView: View {
                     .padding(.top, 8)
             }
 
-            List(model.visibleRows) { row in
-                HStack {
-                    Button {
-                        model.toggleCompletion(lineIdentity: row.id)
-                    } label: {
-                        Image(systemName: row.isCompleted ? "checkmark.circle.fill" : "circle")
-                            .foregroundStyle(row.isCompleted ? .secondary : .tertiary)
-                    }
-                    .buttonStyle(.plain)
-                    .disabled(!model.isEditable)
+            List(selection: $model.selectedRowID) {
+                ForEach(model.visibleRows) { row in
+                    HStack {
+                        Button {
+                            model.toggleCompletion(lineIdentity: row.id, undoManager: undoManager)
+                        } label: {
+                            Image(systemName: row.isCompleted ? "checkmark.circle.fill" : "circle")
+                                .foregroundStyle(row.isCompleted ? .secondary : .tertiary)
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(!model.isEditable)
 
-                    VStack(alignment: .leading, spacing: 6) {
-                        if editingRowID == row.id {
-                            TextField("Edit line", text: $editingRawText)
-                                .textFieldStyle(.roundedBorder)
-                                .focused($isEditingFieldFocused)
-                                .onSubmit {
-                                    commitInlineEdit(for: row.id)
+                        VStack(alignment: .leading, spacing: 6) {
+                            if editingRowID == row.id {
+                                TextField("Edit line", text: $editingRawText)
+                                    .textFieldStyle(.roundedBorder)
+                                    .focused($focusedField, equals: .inlineEdit)
+                                    .onSubmit {
+                                        commitInlineEdit(for: row.id)
+                                    }
+
+                                HStack(spacing: 10) {
+                                    Button("Save") {
+                                        commitInlineEdit(for: row.id)
+                                    }
+                                    Button("Cancel") {
+                                        cancelInlineEdit()
+                                    }
+                                    .keyboardShortcut(.cancelAction)
+                                }
+                                .font(.caption)
+                            } else {
+                                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                                    if let priority = row.priority {
+                                        Text("(\(priority))")
+                                            .font(.callout.weight(.semibold))
+                                            .foregroundStyle(.orange)
+                                    }
+
+                                    Text(row.title)
+                                        .font(.body)
+                                        .strikethrough(row.isCompleted)
+
+                                    Spacer()
+
+                                    if let dueLabel = row.dueLabel {
+                                        Text(dueLabel)
+                                            .font(.caption.weight(.medium))
+                                            .foregroundStyle(row.isOverdue ? .red : .secondary)
+                                    }
+
+                                    Menu {
+                                        Button("Edit") {
+                                            startInlineEdit(for: row)
+                                        }
+                                        Divider()
+                                        Button("Priority A") {
+                                            model.setPriority("A", lineIdentity: row.id, undoManager: undoManager)
+                                        }
+                                        Button("Priority B") {
+                                            model.setPriority("B", lineIdentity: row.id, undoManager: undoManager)
+                                        }
+                                        Button("Priority C") {
+                                            model.setPriority("C", lineIdentity: row.id, undoManager: undoManager)
+                                        }
+                                        Button("Clear Priority") {
+                                            model.setPriority(nil, lineIdentity: row.id, undoManager: undoManager)
+                                        }
+                                        Divider()
+                                        Button("Delete", role: .destructive) {
+                                            model.deleteRow(lineIdentity: row.id, undoManager: undoManager)
+                                        }
+                                        Divider()
+                                        Button("Move Up") {
+                                            model.moveRow(lineIdentity: row.id, by: -1, undoManager: undoManager)
+                                        }
+                                        .disabled(!model.canMove(lineIdentity: row.id, by: -1))
+                                        Button("Move Down") {
+                                            model.moveRow(lineIdentity: row.id, by: 1, undoManager: undoManager)
+                                        }
+                                        .disabled(!model.canMove(lineIdentity: row.id, by: 1))
+                                    } label: {
+                                        Image(systemName: "ellipsis.circle")
+                                            .foregroundStyle(.secondary)
+                                    }
+                                    .disabled(!model.isEditable)
                                 }
 
-                            HStack(spacing: 10) {
-                                Button("Save") {
-                                    commitInlineEdit(for: row.id)
-                                }
-                                Button("Cancel") {
-                                    cancelInlineEdit()
-                                }
-                                .keyboardShortcut(.cancelAction)
+                                Text(row.rawText)
+                                    .font(.caption.monospaced())
+                                    .foregroundStyle(.secondary)
+                                    .textSelection(.enabled)
                             }
-                            .font(.caption)
-                        } else {
-                            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                                if let priority = row.priority {
-                                    Text("(\(priority))")
-                                        .font(.callout.weight(.semibold))
-                                        .foregroundStyle(.orange)
-                                }
-
-                                Text(row.title)
-                                    .font(.body)
-                                    .strikethrough(row.isCompleted)
-
-                                Spacer()
-
-                                if let dueLabel = row.dueLabel {
-                                    Text(dueLabel)
-                                        .font(.caption.weight(.medium))
-                                        .foregroundStyle(row.isOverdue ? .red : .secondary)
-                                }
-
-                                Menu {
-                                    Button("Edit") {
-                                        startInlineEdit(for: row)
-                                    }
-                                    Divider()
-                                    Button("Priority A") {
-                                        model.setPriority("A", lineIdentity: row.id)
-                                    }
-                                    Button("Priority B") {
-                                        model.setPriority("B", lineIdentity: row.id)
-                                    }
-                                    Button("Priority C") {
-                                        model.setPriority("C", lineIdentity: row.id)
-                                    }
-                                    Button("Clear Priority") {
-                                        model.setPriority(nil, lineIdentity: row.id)
-                                    }
-                                    Divider()
-                                    Button("Delete", role: .destructive) {
-                                        model.deleteRow(lineIdentity: row.id)
-                                    }
-                                } label: {
-                                    Image(systemName: "ellipsis.circle")
-                                        .foregroundStyle(.secondary)
-                                }
-                                .disabled(!model.isEditable)
-                            }
-
-                            Text(row.rawText)
-                                .font(.caption.monospaced())
-                                .foregroundStyle(.secondary)
-                                .textSelection(.enabled)
                         }
                     }
+                    .padding(.vertical, 4)
+                    .tag(row.id)
                 }
-                .padding(.vertical, 4)
+            }
+            .listStyle(.inset)
+            .onMoveCommand { direction in
+                switch direction {
+                case .down:
+                    model.moveSelection(by: 1)
+                case .up:
+                    model.moveSelection(by: -1)
+                default:
+                    break
+                }
+            }
+            .onDeleteCommand {
+                guard let selectedRowID = model.selectedRowID else {
+                    return
+                }
+
+                model.deleteRow(lineIdentity: selectedRowID, undoManager: undoManager)
             }
             .onExitCommand {
-                cancelInlineEdit()
+                if model.selection == .done {
+                    model.selection = .inbox
+                } else if editingRowID != nil {
+                    cancelInlineEdit()
+                } else {
+                    focusedField = nil
+                }
+            }
+            .background {
+                keyboardShortcutActions
             }
             .overlay {
                 if model.visibleRows.isEmpty {
@@ -282,32 +407,203 @@ private struct PlainShellView: View {
         }
     }
 
+    private var archiveDetailView: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .firstTextBaseline) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Done")
+                        .font(.largeTitle.weight(.semibold))
+                    Text(model.archiveDescription)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+
+                Button("Back to tasks") {
+                    model.selection = .inbox
+                }
+                .accessibilityIdentifier("plain.done.back")
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 20)
+
+            List(model.visibleRows) { row in
+                HStack {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(.secondary)
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack(alignment: .firstTextBaseline, spacing: 8) {
+                            if let priority = row.priority {
+                                Text("(\(priority))")
+                                    .font(.callout.weight(.semibold))
+                                    .foregroundStyle(.orange)
+                            }
+
+                            Text(row.title)
+                                .font(.body)
+                                .strikethrough(true)
+
+                            Spacer()
+
+                            if let dueLabel = row.dueLabel {
+                                Text(dueLabel)
+                                    .font(.caption.weight(.medium))
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+
+                        Text(row.rawText)
+                            .font(.caption.monospaced())
+                            .foregroundStyle(.secondary)
+                            .textSelection(.enabled)
+                    }
+                }
+                .padding(.vertical, 4)
+                .opacity(0.7)
+            }
+            .listStyle(.inset)
+            .accessibilityIdentifier("plain.done.list")
+            .onExitCommand {
+                model.selection = .inbox
+            }
+            .overlay {
+                if model.visibleRows.isEmpty {
+                    PlaceholderCard(
+                        title: "Nothing archived yet",
+                        systemImage: "archivebox",
+                        message: "Archive completed tasks to move them into done.txt."
+                    )
+                }
+            }
+
+            HStack {
+                Text(model.archiveStatusText)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Spacer()
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 12)
+            .background(Color(nsColor: .windowBackgroundColor))
+        }
+    }
+
+    private var conflictBanner: some View {
+        HStack(spacing: 12) {
+            Text(model.externalTodoConflictMessage)
+                .font(.subheadline)
+
+            Spacer()
+
+            Button("Reload") {
+                model.reloadAfterConflict()
+            }
+
+            Button("Keep Mine") {
+                model.keepMineAfterConflict()
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(Color(nsColor: .controlBackgroundColor))
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .accessibilityIdentifier("plain.conflict.banner")
+    }
+
     private func startInlineEdit(for row: PlainShellModel.Row) {
         guard model.isEditable else {
             return
         }
 
+        model.selectedRowID = row.id
         editingRowID = row.id
         editingRawText = row.rawText
-        isEditingFieldFocused = true
+        focusedField = .inlineEdit
     }
 
     private func commitInlineEdit(for identity: LineIdentity) {
         let trimmed = editingRawText.trimmingCharacters(in: .newlines)
         guard !trimmed.isEmpty else {
-            model.deleteRow(lineIdentity: identity)
+            model.deleteRow(lineIdentity: identity, undoManager: undoManager)
             cancelInlineEdit()
             return
         }
 
-        model.replaceLine(rawText: editingRawText, lineIdentity: identity)
+        model.replaceLine(rawText: editingRawText, lineIdentity: identity, undoManager: undoManager)
         cancelInlineEdit()
     }
 
     private func cancelInlineEdit() {
         editingRowID = nil
         editingRawText = ""
-        isEditingFieldFocused = false
+        focusedField = nil
+    }
+
+    private func resetDraftUI() {
+        newTaskText = ""
+        editingRowID = nil
+        editingRawText = ""
+        focusedField = nil
+    }
+
+    private var keyboardShortcutActions: some View {
+        VStack {
+            Button("Toggle Selected Completion") {
+                guard focusedField == nil,
+                      let selectedRowID = model.selectedRowID
+                else {
+                    return
+                }
+
+                model.toggleCompletion(lineIdentity: selectedRowID, undoManager: undoManager)
+            }
+            .keyboardShortcut(.space, modifiers: [])
+
+            Button("Edit Selected Task") {
+                guard focusedField == nil,
+                      let selectedRow = model.selectedRow
+                else {
+                    return
+                }
+
+                startInlineEdit(for: selectedRow)
+            }
+            .keyboardShortcut(.return, modifiers: [])
+
+            Button("Move Selected Task Up") {
+                guard focusedField == nil,
+                      let selectedRowID = model.selectedRowID,
+                      model.canMove(lineIdentity: selectedRowID, by: -1)
+                else {
+                    return
+                }
+
+                model.moveRow(lineIdentity: selectedRowID, by: -1, undoManager: undoManager)
+            }
+            .keyboardShortcut(.upArrow, modifiers: [.option])
+
+            Button("Move Selected Task Down") {
+                guard focusedField == nil,
+                      let selectedRowID = model.selectedRowID,
+                      model.canMove(lineIdentity: selectedRowID, by: 1)
+                else {
+                    return
+                }
+
+                model.moveRow(lineIdentity: selectedRowID, by: 1, undoManager: undoManager)
+            }
+            .keyboardShortcut(.downArrow, modifiers: [.option])
+
+            Button("Cycle Sort Mode") {
+                model.cycleSortMode()
+            }
+            .keyboardShortcut("S", modifiers: [.command, .shift])
+        }
+        .frame(width: 0, height: 0)
+        .clipped()
+        .opacity(0.001)
     }
 }
 
@@ -317,8 +613,10 @@ private struct PlaceholderCard: View {
     let message: String
     var primaryActionTitle: String?
     var primaryAction: (() -> Void)?
+    var primaryActionAccessibilityIdentifier: String?
     var secondaryActionTitle: String?
     var secondaryAction: (() -> Void)?
+    var secondaryActionAccessibilityIdentifier: String?
 
     var body: some View {
         VStack(spacing: 10) {
@@ -337,9 +635,11 @@ private struct PlaceholderCard: View {
             if let primaryActionTitle, let primaryAction {
                 HStack(spacing: 12) {
                     Button(primaryActionTitle, action: primaryAction)
+                        .accessibilityIdentifier(primaryActionAccessibilityIdentifier ?? "")
 
                     if let secondaryActionTitle, let secondaryAction {
                         Button(secondaryActionTitle, action: secondaryAction)
+                            .accessibilityIdentifier(secondaryActionAccessibilityIdentifier ?? "")
                     }
                 }
                 .padding(.top, 8)
@@ -364,7 +664,7 @@ private struct SidebarRow: View {
     }
 }
 
-private enum SidebarSelection: Hashable {
+enum SidebarSelection: Hashable {
     case inbox
     case today
     case overdue
@@ -374,7 +674,18 @@ private enum SidebarSelection: Hashable {
 }
 
 @MainActor
-private final class PlainShellModel: ObservableObject {
+final class PlainShellModel: ObservableObject {
+    enum DraftState: Equatable {
+        case none
+        case newTask(String)
+        case inlineEdit(LineIdentity, String)
+    }
+
+    enum ExternalChangeState: Equatable {
+        case idle
+        case todoConflict
+    }
+
     struct TagCount {
         let name: String
         let count: Int
@@ -391,8 +702,17 @@ private final class PlainShellModel: ObservableObject {
         let isOverdue: Bool
     }
 
-    @Published var selection: SidebarSelection = .inbox
+    @Published var selection: SidebarSelection = .inbox {
+        didSet {
+            if selection != .done {
+                sortMode = sortPreferences.sortMode(for: selection)
+            }
+            refreshVisibleRows()
+        }
+    }
+    @Published var selectedRowID: LineIdentity?
     @Published private(set) var snapshot: TodoFileSnapshot?
+    @Published private(set) var archiveSnapshot: TodoFileSnapshot?
     @Published private(set) var visibleRows: [Row] = []
     @Published private(set) var sourceDescription = "Loading sample snapshot"
     @Published private(set) var loadError: String?
@@ -401,21 +721,68 @@ private final class PlainShellModel: ObservableObject {
     @Published private(set) var todayCount = 0
     @Published private(set) var overdueCount = 0
     @Published private(set) var doneCount = 0
+    @Published private(set) var archivableCompletedTaskCount = 0
+    @Published private(set) var externalChangeState: ExternalChangeState = .idle
+    @Published private(set) var draftResetToken = 0
+    @Published private(set) var sortMode: TaskSortMode
     @Published private(set) var projectCounts: [TagCount] = []
     @Published private(set) var contextCounts: [TagCount] = []
 
     private var hasLoaded = false
     private let userDefaults = UserDefaults.standard
     private let persistedFilePathKey = "PlainBootstrapSelectedFilePath"
+    private let launchArguments = Set(ProcessInfo.processInfo.arguments)
+    private let preferences: PreferencesStore
+    private let sortPreferences: SortPreferenceStore
     private var store: CoordinatedTodoStore?
     private var isPersistedSourceEditable = false
+    private var currentSourceURL: URL?
+    private var currentPersistSelection = false
+    private var draftState: DraftState = .none
 
     var isEditable: Bool {
         isPersistedSourceEditable
     }
 
+    var hasExternalTodoConflict: Bool {
+        externalChangeState == .todoConflict
+    }
+
+    var externalTodoConflictMessage: String {
+        "todo.txt changed externally."
+    }
+
     var statusText: String {
         "\(inboxCount) tasks · \(doneCount) done · \(overdueCount) overdue"
+    }
+
+    var archiveStatusText: String {
+        "\(doneCount) archived tasks"
+    }
+
+    var archiveDescription: String {
+        guard let currentSourceURL else {
+            return "done.txt"
+        }
+
+        return "\(currentSourceURL.deletingLastPathComponent().appendingPathComponent("done.txt").lastPathComponent) · \(doneCount) archived"
+    }
+
+    var selectedRow: Row? {
+        guard let selectedRowID else {
+            return nil
+        }
+
+        return visibleRows.first { $0.id == selectedRowID }
+    }
+
+    init(
+        preferences: PreferencesStore = PreferencesStore(),
+        sortPreferences: SortPreferenceStore = SortPreferenceStore()
+    ) {
+        self.preferences = preferences
+        self.sortPreferences = sortPreferences
+        self.sortMode = sortPreferences.sortMode(for: .inbox)
     }
 
     func loadInitialSnapshotIfNeeded() {
@@ -435,16 +802,29 @@ private final class PlainShellModel: ObservableObject {
             store?.stopMonitoring()
 
             let store = CoordinatedTodoStore(url: url)
-            store.onSnapshotChange = { [weak self] result in
+            store.onExternalChange = { [weak self] change in
                 DispatchQueue.main.async {
-                    self?.applyReloadResult(result, sourceURL: url, persistSelection: persistSelection)
+                    switch change {
+                    case .todo:
+                        self?.handleTodoFileChangedExternally()
+                    case .archive:
+                        self?.handleDoneFileChangedExternally()
+                    }
                 }
             }
             store.startMonitoring()
 
             let snapshot = try store.load()
+            let archiveSnapshot = try store.loadArchiveSnapshot()
             self.store = store
-            apply(snapshot: snapshot, sourceURL: url, persistSelection: persistSelection)
+            self.currentSourceURL = url
+            self.currentPersistSelection = persistSelection
+            apply(
+                todoSnapshot: snapshot,
+                archiveSnapshot: archiveSnapshot,
+                sourceURL: url,
+                persistSelection: persistSelection
+            )
         } catch {
             self.store = nil
             present(error: error)
@@ -462,6 +842,7 @@ private final class PlainShellModel: ObservableObject {
 
     func present(error: Error) {
         snapshot = nil
+        archiveSnapshot = nil
         visibleRows = []
         projectCounts = []
         contextCounts = []
@@ -469,25 +850,109 @@ private final class PlainShellModel: ObservableObject {
         todayCount = 0
         overdueCount = 0
         doneCount = 0
+        archivableCompletedTaskCount = 0
+        externalChangeState = .idle
         sourceDescription = "Bootstrap shell"
         loadError = error.localizedDescription
         transientError = nil
+        selectedRowID = nil
     }
 
-    func addTask(rawText: String) {
+    func updateDraftState(newTaskText: String, editingRowID: LineIdentity?, editingRawText: String) {
+        if let editingRowID {
+            draftState = .inlineEdit(editingRowID, editingRawText)
+            return
+        }
+
+        let trimmedText = newTaskText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmedText.isEmpty {
+            draftState = .none
+        } else {
+            draftState = .newTask(newTaskText)
+        }
+    }
+
+    func handleTodoFileChangedExternally() {
+        if hasActiveDraft {
+            externalChangeState = .todoConflict
+            return
+        }
+
+        do {
+            try reloadAllSnapshotsFromDisk()
+        } catch {
+            present(error: error)
+        }
+    }
+
+    func handleDoneFileChangedExternally() {
+        do {
+            try reloadArchiveSnapshotFromDisk()
+        } catch {
+            present(error: error)
+        }
+    }
+
+    func reloadAfterConflict() {
+        do {
+            try reloadAllSnapshotsFromDisk()
+            clearDraftStateAndRequestReset()
+        } catch {
+            present(error: error)
+        }
+    }
+
+    func keepMineAfterConflict() {
+        guard let store, let currentSourceURL else {
+            return
+        }
+
+        do {
+            let todoSnapshot = try synthesizedTodoSnapshotForCurrentDraft()
+            let transaction = try store.write(todoSnapshot: todoSnapshot, doneSnapshot: archiveSnapshot ?? .empty)
+            apply(transaction: transaction)
+            clearDraftStateAndRequestReset()
+            transientError = nil
+            sourceDescription = sourceLabel(for: currentSourceURL, snapshot: transaction.updatedTodoSnapshot)
+        } catch {
+            transientError = error.localizedDescription
+        }
+    }
+
+    func archiveCompletedTasks(undoManager: UndoManager?) {
         guard let store else {
             return
         }
 
         do {
-            _ = try store.appendTask(rawText: rawText)
+            let transaction = try store.archiveCompletedTasks()
+            apply(transaction: transaction)
+            selection = .inbox
+            registerUndo(actionName: "Archive Completed", transaction: transaction, undoManager: undoManager)
             transientError = nil
         } catch {
             transientError = error.localizedDescription
         }
     }
 
-    func toggleCompletion(lineIdentity: LineIdentity) {
+    func addTask(rawText: String, undoManager: UndoManager?) {
+        guard let store else {
+            return
+        }
+
+        do {
+            let transaction = try store.appendTask(rawText: rawText)
+            apply(transaction: transaction)
+            selectedRowID = transaction.updatedSnapshot.lines.last?.identity
+            registerUndo(actionName: "Add Task", transaction: transaction, undoManager: undoManager)
+            draftState = .none
+            transientError = nil
+        } catch {
+            transientError = error.localizedDescription
+        }
+    }
+
+    func toggleCompletion(lineIdentity: LineIdentity, undoManager: UndoManager?) {
         guard let store else {
             return
         }
@@ -500,57 +965,169 @@ private final class PlainShellModel: ObservableObject {
             return
         }
 
+        let completionDate = TodoDate(year: year, month: month, day: day)
+
+        if preferences.archiveBehavior == .automatic,
+           let snapshot,
+           let lineIndex = snapshot.lineIndex(for: lineIdentity),
+           snapshot.lines.indices.contains(lineIndex),
+           snapshot.lines[lineIndex].task?.isCompleted == false
+        {
+            do {
+                let transaction = try store.completeAndArchive(lineIdentity: lineIdentity, completionDate: completionDate)
+                apply(transaction: transaction)
+                registerUndo(actionName: "Complete and Archive", transaction: transaction, undoManager: undoManager)
+                transientError = nil
+            } catch {
+                transientError = error.localizedDescription
+            }
+            return
+        }
+
         do {
-            _ = try store.toggleCompletion(lineIdentity: lineIdentity, completionDate: TodoDate(year: year, month: month, day: day))
+            let transaction = try store.toggleCompletion(lineIdentity: lineIdentity, completionDate: completionDate)
+            apply(transaction: transaction)
+            selectedRowID = transaction.updatedSnapshot.lineIndex(for: lineIdentity).flatMap { transaction.updatedSnapshot.lines[$0].identity } ?? selectedRowID
+            registerUndo(actionName: "Toggle Complete", transaction: transaction, undoManager: undoManager)
             transientError = nil
         } catch {
             transientError = error.localizedDescription
         }
     }
 
-    func setPriority(_ priority: Character?, lineIdentity: LineIdentity) {
+    func setPriority(_ priority: Character?, lineIdentity: LineIdentity, undoManager: UndoManager?) {
         guard let store else {
             return
         }
 
         do {
-            _ = try store.setPriority(priority, lineIdentity: lineIdentity)
+            let transaction = try store.setPriority(priority, lineIdentity: lineIdentity)
+            apply(transaction: transaction)
+            selectedRowID = transaction.updatedSnapshot.lines.first(where: { $0.rawText == transaction.updatedSnapshot.lines[transaction.originalSnapshot.lineIndex(for: lineIdentity) ?? 0].rawText })?.identity ?? selectedRowID
+            registerUndo(actionName: "Set Priority", transaction: transaction, undoManager: undoManager)
             transientError = nil
         } catch {
             transientError = error.localizedDescription
         }
     }
 
-    func deleteRow(lineIdentity: LineIdentity) {
+    func deleteRow(lineIdentity: LineIdentity, undoManager: UndoManager?) {
         guard let store else {
             return
         }
 
         do {
-            _ = try store.deleteTask(lineIdentity: lineIdentity)
+            let transaction = try store.deleteTask(lineIdentity: lineIdentity)
+            apply(transaction: transaction)
+            selectedRowID = visibleRows.first?.id
+            registerUndo(actionName: "Delete Task", transaction: transaction, undoManager: undoManager)
             transientError = nil
         } catch {
             transientError = error.localizedDescription
         }
     }
 
-    func replaceLine(rawText: String, lineIdentity: LineIdentity) {
+    func moveRow(lineIdentity: LineIdentity, by offset: Int, undoManager: UndoManager?) {
+        guard let store, canMove(lineIdentity: lineIdentity, by: offset) else {
+            return
+        }
+
+        do {
+            let transaction = try store.moveLine(lineIdentity: lineIdentity, by: offset)
+            apply(transaction: transaction)
+            selectedRowID = transaction.updatedSnapshot.lines.first(where: { $0.identity == lineIdentity })?.identity
+                ?? transaction.updatedSnapshot.lineIndex(for: lineIdentity).flatMap { transaction.updatedSnapshot.lines[$0].identity }
+                ?? selectedRowID
+            registerUndo(actionName: offset < 0 ? "Move Task Up" : "Move Task Down", transaction: transaction, undoManager: undoManager)
+            transientError = nil
+        } catch {
+            transientError = error.localizedDescription
+        }
+    }
+
+    func replaceLine(rawText: String, lineIdentity: LineIdentity, undoManager: UndoManager?) {
         guard let store else {
             return
         }
 
         do {
-            _ = try store.replaceLine(rawText: rawText, lineIdentity: lineIdentity)
+            let transaction = try store.replaceLine(rawText: rawText, lineIdentity: lineIdentity)
+            apply(transaction: transaction)
+            selectedRowID = transaction.updatedSnapshot.lines.first(where: { $0.rawText == rawText })?.identity ?? selectedRowID
+            registerUndo(actionName: "Edit Task", transaction: transaction, undoManager: undoManager)
+            draftState = .none
             transientError = nil
         } catch {
             transientError = error.localizedDescription
         }
+    }
+
+    func moveSelection(by offset: Int) {
+        guard !visibleRows.isEmpty else {
+            selectedRowID = nil
+            return
+        }
+
+        guard let selectedRowID,
+              let currentIndex = visibleRows.firstIndex(where: { $0.id == selectedRowID })
+        else {
+            selectedRowID = visibleRows.first?.id
+            return
+        }
+
+        let nextIndex = max(0, min(visibleRows.count - 1, currentIndex + offset))
+        self.selectedRowID = visibleRows[nextIndex].id
+    }
+
+    func canMove(lineIdentity: LineIdentity, by offset: Int) -> Bool {
+        guard selection == .inbox,
+              let snapshot,
+              let lineIndex = snapshot.lineIndex(for: lineIdentity)
+        else {
+            return false
+        }
+
+        let destinationIndex = lineIndex + offset
+        return snapshot.lines.indices.contains(destinationIndex)
+    }
+
+    func setSortMode(_ sortMode: TaskSortMode) {
+        guard selection != .done else {
+            return
+        }
+
+        self.sortMode = sortMode
+        sortPreferences.setSortMode(sortMode, for: selection)
+        refreshVisibleRows()
+    }
+
+    func cycleSortMode() {
+        setSortMode(sortMode.next)
     }
 
     private func resolveInitialSourceURL() -> URL? {
+        if launchArguments.contains("--ui-testing") {
+            return nil
+        }
+
         let arguments = Array(CommandLine.arguments.dropFirst())
-        if let firstArgument = arguments.first {
-            return URL(fileURLWithPath: NSString(string: firstArgument).expandingTildeInPath)
+        if let inlineArgument = arguments.first(where: { $0.hasPrefix("--todo-file=") }) {
+            let path = String(inlineArgument.dropFirst("--todo-file=".count))
+            return URL(fileURLWithPath: NSString(string: path).expandingTildeInPath)
+        }
+
+        if let flagIndex = arguments.firstIndex(of: "--todo-file"),
+           arguments.indices.contains(flagIndex + 1)
+        {
+            let path = arguments[flagIndex + 1]
+            return URL(fileURLWithPath: NSString(string: path).expandingTildeInPath)
+        }
+
+        if arguments.count == 1,
+           let providedPath = arguments.first,
+           !providedPath.hasPrefix("-")
+        {
+            return URL(fileURLWithPath: NSString(string: providedPath).expandingTildeInPath)
         }
 
         if let persistedPath = userDefaults.string(forKey: persistedFilePathKey) {
@@ -561,7 +1138,11 @@ private final class PlainShellModel: ObservableObject {
     }
 
     private func bundledSampleURL() -> URL? {
-        Bundle.module.url(forResource: "sample", withExtension: "txt", subdirectory: "Resources")
+        #if SWIFT_PACKAGE
+        return Bundle.module.url(forResource: "sample", withExtension: "txt", subdirectory: "Resources")
+        #else
+        return Bundle.main.url(forResource: "sample", withExtension: "txt")
+        #endif
     }
 
     private func applyReloadResult(
@@ -571,23 +1152,41 @@ private final class PlainShellModel: ObservableObject {
     ) {
         switch result {
         case let .success(snapshot):
-            apply(snapshot: snapshot, sourceURL: sourceURL, persistSelection: persistSelection)
+            do {
+                let archiveSnapshot = try store?.loadArchiveSnapshot() ?? .empty
+                apply(
+                    todoSnapshot: snapshot,
+                    archiveSnapshot: archiveSnapshot,
+                    sourceURL: sourceURL,
+                    persistSelection: persistSelection
+                )
+            } catch {
+                present(error: error)
+            }
         case let .failure(error):
             present(error: error)
         }
     }
 
-    private func apply(snapshot: TodoFileSnapshot, sourceURL: URL, persistSelection: Bool) {
-        self.snapshot = snapshot
+    private func apply(
+        todoSnapshot: TodoFileSnapshot,
+        archiveSnapshot: TodoFileSnapshot,
+        sourceURL: URL,
+        persistSelection: Bool
+    ) {
+        self.snapshot = todoSnapshot
+        self.archiveSnapshot = archiveSnapshot
         self.loadError = nil
-        self.transientError = nil
+        if externalChangeState != .todoConflict {
+            self.transientError = nil
+        }
         self.isPersistedSourceEditable = persistSelection && FileManager.default.isWritableFile(atPath: sourceURL.path)
 
         if persistSelection {
             userDefaults.set(sourceURL.path, forKey: persistedFilePathKey)
         }
 
-        let indexedTasks = snapshot.lines.enumerated().compactMap { index, line -> IndexedTask? in
+        let indexedTasks = todoSnapshot.lines.enumerated().compactMap { index, line -> IndexedTask? in
             guard let task = line.task else {
                 return nil
             }
@@ -597,15 +1196,215 @@ private final class PlainShellModel: ObservableObject {
 
         let incompleteTasks = indexedTasks.filter { !$0.task.isCompleted }
         let completedTasks = indexedTasks.filter(\.task.isCompleted)
+        let archivedTasks = archiveSnapshot.tasks
 
         inboxCount = incompleteTasks.count
         todayCount = incompleteTasks.filter { $0.dueBucket(relativeTo: Date()) == .today }.count
         overdueCount = incompleteTasks.filter { $0.dueBucket(relativeTo: Date()) == .overdue }.count
-        doneCount = completedTasks.count
+        doneCount = archivedTasks.count
+        archivableCompletedTaskCount = completedTasks.count
         projectCounts = buildTagCounts(from: incompleteTasks, keyPath: \.task.projects)
         contextCounts = buildTagCounts(from: incompleteTasks, keyPath: \.task.contexts)
-        sourceDescription = sourceLabel(for: sourceURL, snapshot: snapshot)
-        visibleRows = buildVisibleRows(from: snapshot, tasks: indexedTasks)
+        sourceDescription = sourceLabel(for: sourceURL, snapshot: todoSnapshot)
+        refreshVisibleRows(tasks: indexedTasks)
+    }
+
+    private func apply(transaction: WriteTransaction) {
+        guard let currentSourceURL else {
+            return
+        }
+
+        apply(
+            todoSnapshot: transaction.updatedSnapshot,
+            archiveSnapshot: archiveSnapshot ?? .empty,
+            sourceURL: currentSourceURL,
+            persistSelection: currentPersistSelection
+        )
+    }
+
+    private func apply(transaction: ArchiveTransaction) {
+        guard let currentSourceURL else {
+            return
+        }
+
+        apply(
+            todoSnapshot: transaction.updatedTodoSnapshot,
+            archiveSnapshot: transaction.updatedDoneSnapshot,
+            sourceURL: currentSourceURL,
+            persistSelection: currentPersistSelection
+        )
+    }
+
+    private var hasActiveDraft: Bool {
+        draftState != .none
+    }
+
+    private func reloadAllSnapshotsFromDisk() throws {
+        guard let store, let currentSourceURL else {
+            return
+        }
+
+        let reloaded = try store.reloadAll()
+        externalChangeState = .idle
+        apply(
+            todoSnapshot: reloaded.todo,
+            archiveSnapshot: reloaded.archive,
+            sourceURL: currentSourceURL,
+            persistSelection: currentPersistSelection
+        )
+    }
+
+    private func reloadArchiveSnapshotFromDisk() throws {
+        guard let store, let currentSourceURL, let currentSnapshot = snapshot else {
+            return
+        }
+
+        let reloadedArchiveSnapshot = try store.loadArchiveSnapshot()
+        apply(
+            todoSnapshot: currentSnapshot,
+            archiveSnapshot: reloadedArchiveSnapshot,
+            sourceURL: currentSourceURL,
+            persistSelection: currentPersistSelection
+        )
+    }
+
+    private func synthesizedTodoSnapshotForCurrentDraft() throws -> TodoFileSnapshot {
+        guard let snapshot else {
+            throw CocoaError(.fileReadUnknown)
+        }
+
+        switch draftState {
+        case .none:
+            return snapshot
+        case let .newTask(rawText):
+            return TaskMutation.append(rawText: rawText, to: snapshot)
+        case let .inlineEdit(lineIdentity, rawText):
+            guard let lineIndex = snapshot.lineIndex(for: lineIdentity) else {
+                throw TaskMutationError.lineIndexOutOfBounds
+            }
+
+            if rawText.trimmingCharacters(in: .newlines).isEmpty {
+                return try TaskMutation.deleteLine(at: lineIndex, in: snapshot)
+            }
+
+            return try TaskMutation.replaceLine(with: rawText, at: lineIndex, in: snapshot)
+        }
+    }
+
+    private func clearDraftStateAndRequestReset() {
+        draftState = .none
+        externalChangeState = .idle
+        draftResetToken += 1
+    }
+
+    private func registerUndo(actionName: String, transaction: WriteTransaction, undoManager: UndoManager?) {
+        undoManager?.registerUndo(withTarget: self) { target in
+            target.restoreSnapshot(
+                transaction.originalSnapshot,
+                inverseSnapshot: transaction.updatedSnapshot,
+                actionName: actionName,
+                undoManager: undoManager
+            )
+        }
+        undoManager?.setActionName(actionName)
+    }
+
+    private func registerUndo(actionName: String, transaction: ArchiveTransaction, undoManager: UndoManager?) {
+        undoManager?.registerUndo(withTarget: self) { target in
+            target.restoreArchiveSnapshots(
+                todoSnapshot: transaction.originalTodoSnapshot,
+                doneSnapshot: transaction.originalDoneSnapshot,
+                inverseTodoSnapshot: transaction.updatedTodoSnapshot,
+                inverseDoneSnapshot: transaction.updatedDoneSnapshot,
+                actionName: actionName,
+                undoManager: undoManager
+            )
+        }
+        undoManager?.setActionName(actionName)
+    }
+
+    private func restoreSnapshot(
+        _ snapshot: TodoFileSnapshot,
+        inverseSnapshot: TodoFileSnapshot,
+        actionName: String,
+        undoManager: UndoManager?
+    ) {
+        guard let store else {
+            return
+        }
+
+        do {
+            let transaction = try store.write(snapshot: snapshot)
+            apply(transaction: transaction)
+            undoManager?.registerUndo(withTarget: self) { target in
+                target.restoreSnapshot(
+                    inverseSnapshot,
+                    inverseSnapshot: snapshot,
+                    actionName: actionName,
+                    undoManager: undoManager
+                )
+            }
+            undoManager?.setActionName(actionName)
+            transientError = nil
+        } catch {
+            transientError = error.localizedDescription
+        }
+    }
+
+    private func restoreArchiveSnapshots(
+        todoSnapshot: TodoFileSnapshot,
+        doneSnapshot: TodoFileSnapshot,
+        inverseTodoSnapshot: TodoFileSnapshot,
+        inverseDoneSnapshot: TodoFileSnapshot,
+        actionName: String,
+        undoManager: UndoManager?
+    ) {
+        guard let store else {
+            return
+        }
+
+        do {
+            let transaction = try store.write(todoSnapshot: todoSnapshot, doneSnapshot: doneSnapshot)
+            apply(transaction: transaction)
+            undoManager?.registerUndo(withTarget: self) { target in
+                target.restoreArchiveSnapshots(
+                    todoSnapshot: inverseTodoSnapshot,
+                    doneSnapshot: inverseDoneSnapshot,
+                    inverseTodoSnapshot: todoSnapshot,
+                    inverseDoneSnapshot: doneSnapshot,
+                    actionName: actionName,
+                    undoManager: undoManager
+                )
+            }
+            undoManager?.setActionName(actionName)
+            transientError = nil
+        } catch {
+            transientError = error.localizedDescription
+        }
+    }
+
+    private func refreshVisibleRows(tasks providedTasks: [IndexedTask]? = nil) {
+        let todoSnapshot = snapshot ?? .empty
+        let archiveSnapshot = archiveSnapshot ?? .empty
+        let indexedTasks = providedTasks ?? todoSnapshot.lines.enumerated().compactMap { index, line -> IndexedTask? in
+            guard let task = line.task else {
+                return nil
+            }
+
+            return IndexedTask(index: index, line: line, task: task)
+        }
+
+        if selection == .done {
+            visibleRows = buildArchiveRows(from: archiveSnapshot)
+        } else {
+            visibleRows = buildVisibleRows(from: todoSnapshot, tasks: indexedTasks)
+        }
+
+        if let selectedRowID, visibleRows.contains(where: { $0.id == selectedRowID }) {
+            self.selectedRowID = selectedRowID
+        } else {
+            self.selectedRowID = visibleRows.first?.id
+        }
     }
 
     private func buildTagCounts(
@@ -624,7 +1423,14 @@ private final class PlainShellModel: ObservableObject {
     }
 
     private func buildVisibleRows(from snapshot: TodoFileSnapshot, tasks: [IndexedTask]) -> [Row] {
-        snapshot.lines.enumerated().compactMap { index, line in
+        if sortMode != .fileOrder {
+            return tasks
+                .filter(matchesSelection)
+                .sorted(by: sortComparator)
+                .map(makeRow)
+        }
+
+        return snapshot.lines.enumerated().compactMap { index, line -> Row? in
             let indexedTask = tasks.first { $0.index == index }
 
             if let indexedTask {
@@ -661,6 +1467,85 @@ private final class PlainShellModel: ObservableObject {
         }
     }
 
+    private func makeRow(from indexedTask: IndexedTask) -> Row {
+        Row(
+            id: indexedTask.line.identity,
+            lineIndex: indexedTask.index,
+            title: indexedTask.task.body.isEmpty ? indexedTask.line.rawText : indexedTask.task.body,
+            rawText: indexedTask.line.rawText,
+            priority: indexedTask.task.priority.map(String.init),
+            isCompleted: indexedTask.task.isCompleted,
+            dueLabel: indexedTask.dueLabel(relativeTo: Date()),
+            isOverdue: indexedTask.dueBucket(relativeTo: Date()) == .overdue
+        )
+    }
+
+    private func sortComparator(_ lhs: IndexedTask, _ rhs: IndexedTask) -> Bool {
+        switch sortMode {
+        case .fileOrder:
+            return lhs.index < rhs.index
+        case .priority:
+            let lhsPriority = lhs.task.priority.map { Int($0.asciiValue ?? 91) } ?? Int.max
+            let rhsPriority = rhs.task.priority.map { Int($0.asciiValue ?? 91) } ?? Int.max
+
+            if lhsPriority != rhsPriority {
+                return lhsPriority < rhsPriority
+            }
+
+            return lhs.index < rhs.index
+        case .creationDate:
+            switch (lhs.task.creationDate, rhs.task.creationDate) {
+            case let (.some(lhsDate), .some(rhsDate)):
+                if lhsDate.year != rhsDate.year {
+                    return lhsDate.year > rhsDate.year
+                }
+
+                if lhsDate.month != rhsDate.month {
+                    return lhsDate.month > rhsDate.month
+                }
+
+                if lhsDate.day != rhsDate.day {
+                    return lhsDate.day > rhsDate.day
+                }
+            case (.some, .none):
+                return true
+            case (.none, .some):
+                return false
+            case (.none, .none):
+                break
+            }
+
+            return lhs.index < rhs.index
+        case .alphabetical:
+            let comparison = lhs.task.body.localizedCaseInsensitiveCompare(rhs.task.body)
+            if comparison != .orderedSame {
+                return comparison == .orderedAscending
+            }
+
+            return lhs.index < rhs.index
+        }
+    }
+
+    private func buildArchiveRows(from snapshot: TodoFileSnapshot) -> [Row] {
+        snapshot.lines.enumerated().reversed().compactMap { index, line in
+            guard let task = line.task else {
+                return nil
+            }
+
+            let indexedTask = IndexedTask(index: index, line: line, task: task)
+            return Row(
+                id: line.identity,
+                lineIndex: index,
+                title: task.body.isEmpty ? line.rawText : task.body,
+                rawText: line.rawText,
+                priority: task.priority.map(String.init),
+                isCompleted: true,
+                dueLabel: indexedTask.dueLabel(relativeTo: Date()),
+                isOverdue: false
+            )
+        }
+    }
+
     private func matchesSelection(_ indexedTask: IndexedTask) -> Bool {
         switch selection {
         case .inbox:
@@ -670,7 +1555,7 @@ private final class PlainShellModel: ObservableObject {
         case .overdue:
             return !indexedTask.task.isCompleted && indexedTask.dueBucket(relativeTo: Date()) == .overdue
         case .done:
-            return indexedTask.task.isCompleted
+            return false
         case let .project(project):
             return !indexedTask.task.isCompleted && indexedTask.task.projects.contains(project)
         case let .context(context):

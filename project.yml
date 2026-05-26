@@ -1,0 +1,90 @@
+name: Plain
+options:
+  bundleIdPrefix: com.danmunz
+  deploymentTarget:
+    macOS: '14.0'
+settings:
+  base:
+    SWIFT_VERSION: 6.0
+    MACOSX_DEPLOYMENT_TARGET: '14.0'
+targets:
+  PlainCore:
+    type: framework
+    platform: macOS
+    sources:
+      - Sources/PlainCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.danmunz.Plain.PlainCore
+        GENERATE_INFOPLIST_FILE: YES
+        CODE_SIGNING_ALLOWED: NO
+  PlainApp:
+    type: application
+    platform: macOS
+    sources:
+      - Sources/PlainApp
+    resources:
+      - Sources/PlainApp/Resources
+    dependencies:
+      - target: PlainCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.danmunz.Plain
+        PRODUCT_NAME: Plain
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_NSPrincipalClass: NSApplication
+        INFOPLIST_KEY_NSHumanReadableCopyright: ''
+  PlainCoreTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - Tests/PlainCoreTests
+    resources:
+      - Tests/PlainCoreTests/Fixtures
+    dependencies:
+      - target: PlainCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.danmunz.Plain.PlainCoreTests
+        GENERATE_INFOPLIST_FILE: YES
+        CODE_SIGNING_ALLOWED: NO
+  PlainAppTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - Tests/PlainAppTests
+    dependencies:
+      - target: PlainApp
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.danmunz.Plain.PlainAppTests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_HOST: $(BUILT_PRODUCTS_DIR)/Plain.app/Contents/MacOS/Plain
+        BUNDLE_LOADER: $(TEST_HOST)
+  PlainUITests:
+    type: bundle.ui-testing
+    platform: macOS
+    sources:
+      - Tests/PlainUITests
+    dependencies:
+      - target: PlainApp
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.danmunz.Plain.PlainUITests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: PlainApp
+schemes:
+  PlainApp:
+    build:
+      targets:
+        PlainApp: all
+        PlainCore: all
+        PlainCoreTests: [test]
+        PlainAppTests: [test]
+        PlainUITests: [test]
+    test:
+      gatherCoverageData: false
+      targets:
+        - PlainCoreTests
+        - PlainAppTests
+        - PlainUITests

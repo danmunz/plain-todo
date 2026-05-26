@@ -2,7 +2,7 @@
 
 ## Status
 
-This repo is no longer docs-only. It now has a SwiftPM bootstrap with `PlainCore`, a SwiftUI `PlainApp` executable, parser and serializer coverage, a minimal mutation layer, coordinated read and write support, and a narrow editable shell. Full Xcode-specific packaging, widgets, app extensions, and UI-test infrastructure are still blocked by the missing full Xcode install. The plan below remains the dependency order for the remaining work.
+This repo is no longer docs-only. It now has a SwiftPM bootstrap, an XcodeGen-backed `Plain.xcodeproj`, `PlainCore`, a SwiftUI `PlainApp` shell, parser and serializer coverage, coordinated read and write support, inline raw-line editing, keyboard row selection, UndoManager-backed destructive edits, reorder, coordinated archive-to-`done.txt`, a read-only Done view, archive-behavior preferences, persisted per-view sort modes, explicit external-change conflict handling with reload and keep-mine flows, and working app, unit, and UI smoke tests. Widgets, app extensions, richer diff tooling, search, and secondary surfaces remain open. The plan below remains the dependency order for the remaining work.
 
 ## Recommended Stack
 
@@ -23,7 +23,7 @@ This repo is no longer docs-only. It now has a SwiftPM bootstrap with `PlainCore
   - macOS app target
   - window lifecycle, onboarding, preferences, menu bar, quick-add, deep links
 - `PlainCore`
-  - shared module for parser, serializer, filtering, sorting, search projection, archive planning, and coordinated file access abstractions
+  - shared module for parser, serializer, filtering, search projection, archive planning, and coordinated file access abstractions
 - `PlainWidgetExtension`
   - WidgetKit target backed by `PlainCore`
 - `PlainCoreTests`
@@ -182,8 +182,12 @@ Quality gate:
 
 Current progress note:
 
-- the bootstrap shell already supports a minimal coordinated write path for add, complete, reprioritize, and delete
-- inline raw-line editing, keyboard navigation, selection model, reorder, and undo or redo remain open
+- the shell now supports coordinated add, complete, reprioritize, inline edit, and delete flows through one write path
+- keyboard selection and UndoManager-backed undo or redo are implemented for the current shell
+- completed tasks can now be archived into `done.txt` through a coordinated dual-file transaction, and the Done sidebar view is backed by the archive file
+- external todo and done file changes are now observed explicitly, with non-modal reload and keep-mine conflict handling that avoids clobbering active drafts
+- reorder is implemented in the inbox via keyboard and menu actions, and each task view now remembers its own display sort mode in app state without mutating file order
+- drag reorder, search overlay, richer diff tooling, and broader regression coverage for end-to-end keyboard editing remain open
 
 ### Phase 4. Advanced File Workflows
 

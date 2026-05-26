@@ -1,43 +1,57 @@
 # Plain
 
-Plain is a native macOS todo.txt client. This repo is currently bootstrapped as a Swift package so work can continue before a full Xcode app project is available.
+Plain is a native macOS todo.txt client. The repo now supports both a SwiftPM bootstrap path and an Xcode-native app project generated from XcodeGen.
 
 ## Current Shape
 
 - `PlainCore` contains the parser, serializer, mutation layer, and coordinated file store.
-- `PlainApp` is a SwiftUI bootstrap executable with onboarding, persisted file selection, sidebar-derived filters, and a narrow editable path for add, complete, reprioritize, and delete.
-- `PlainCoreTests` covers parser fidelity, malformed line preservation, newline handling, mutation behavior, coordinated reads, and coordinated writes.
+- `PlainApp` is a SwiftUI macOS app shell with onboarding, persisted file selection, sidebar-derived filters, per-view persisted sort modes, inline raw-line editing, keyboard selection, undo-backed add, complete, reprioritize, edit, delete, reorder, and archive flows, plus a read-only `done.txt` view, archive-behavior preferences, and non-modal external-change conflict handling.
+- `PlainCoreTests`, `PlainAppTests`, and `PlainUITests` cover parser fidelity, coordinated file access, dual-file archive transactions, external-change handling, shell-model undo and selection behavior, and a basic app launch smoke path.
 
-## Toolchain Constraint
+## Toolchain
 
-This repository is intentionally set up for the Swift 6 command line toolchain only.
+The primary development path is now the generated Xcode project.
 
-- `swift build` and `swift test` are the supported validation commands today.
-- `xcodebuild` and a normal `.xcodeproj` or `.xcworkspace` app target are not available until full Xcode is installed.
-- The SwiftUI shell is a bootstrap executable, not the final app-bundle, signing, widget, or extension story.
+- `project.yml` is the source of truth for the Xcode project.
+- `xcodegen generate` refreshes `Plain.xcodeproj` after target or file-layout changes.
+- `xcodebuild` is the primary validation path.
+- `swift build` and `swift test` remain useful for fast core-only validation.
 
 ## Build
 
 ```bash
-swift build
-swift build --product PlainApp
+xcodegen generate
+xcodebuild -project Plain.xcodeproj -scheme PlainApp -destination 'platform=macOS' build
 ```
 
 ## Run
 
-Launch the bootstrap shell with the bundled sample snapshot:
+Run the app from Xcode:
+
+```bash
+open Plain.xcodeproj
+```
+
+Then run the `PlainApp` scheme. To start against a real file, add a launch argument in the scheme:
+
+```bash
+--todo-file ~/path/to/todo.txt
+```
+
+The SwiftPM bootstrap is still available:
 
 ```bash
 swift run PlainApp
-```
-
-Or point it at a real todo.txt path:
-
-```bash
 swift run PlainApp ~/path/to/todo.txt
 ```
 
 ## Test
+
+```bash
+xcodebuild -project Plain.xcodeproj -scheme PlainApp -destination 'platform=macOS' test
+```
+
+For faster core-only validation:
 
 ```bash
 swift test
@@ -49,7 +63,8 @@ The current bootstrap has working foundations but is not yet v1 complete:
 
 - PlainCore-first architecture
 - one coordinated read and write pipeline
-- sidebar-derived filters and persisted file choice
-- minimal editable shell actions: add, complete, reprioritize, delete
+- sidebar-derived filters, per-view persisted sort modes, and persisted file choice
+- inline raw-line editing, keyboard row selection, UndoManager-backed destructive edits, reorder, coordinated archive-to-`done.txt`, archive-behavior preferences, and reload-or-keep-mine conflict handling for external file changes
+- Xcode-native app, unit-test, and UI-test path
 - no database or hidden persistence
-- no archive flow, widget, menu bar, quick-add, or scratch pad yet
+- no widget, menu bar, quick-add, diff view, search overlay, bulk actions, or scratch pad yet

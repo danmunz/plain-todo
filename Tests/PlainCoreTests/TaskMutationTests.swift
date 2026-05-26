@@ -99,3 +99,58 @@ func replacingLineRefreshesIdentityAndKeepsNeighborsStable() throws {
     #expect(updatedTask.priority == "B")
     #expect(updatedTask.metadata == [TodoKeyValue(key: "wait", value: "2026-06-02")])
 }
+
+@Test
+func archiveCompletedTasksMovesOnlyCompletedLinesIntoDoneSnapshot() throws {
+    let todoSnapshot = TodoParser.parse(
+        "Review receipts @desk\n"
+        + "x 2026-05-25 File taxes +finance\n"
+        + "x 2026-05-24 Send invoice +client\n"
+    )
+    let doneSnapshot = TodoParser.parse("x 2026-05-20 Close sprint +plain\n")
+
+    let result = try TaskMutation.archiveCompletedTasks(from: todoSnapshot, into: doneSnapshot)
+
+    #expect(result.archivedTaskCount == 2)
+    #expect(result.updatedTodoSnapshot.tasks.count == 1)
+    #expect(result.updatedTodoSnapshot.tasks.allSatisfy { !$0.isCompleted })
+    #expect(result.updatedDoneSnapshot.tasks.count == 3)
+    #expect(result.updatedDoneSnapshot.lines.last?.rawText == "x 2026-05-24 Send invoice +client")
+}
+
+@Test
+func movingLineReordersOnlyTheRequestedLine() throws {
+    let snapshot = TodoParser.parse(
+        "Call accountant @phone +taxes\n"
+        + "Review parser bootstrap +plain @work\n"
+        + "Schedule dentist @phone +health\n"
+    )
+
+    let updatedSnapshot = try TaskMutation.moveLine(at: 0, to: 2, in: snapshot)
+
+    #expect(updatedSnapshot.lines.map(\.rawText) == [
+        "Review parser bootstrap +plain @work",
+        "Schedule dentist @phone +health",
+        "Call accountant @phone +taxes"
+    ])
+}
+
+@Test
+func completeAndArchiveMovesOnlyTheTargetTaskIntoDoneSnapshot() throws {
+    let todoSnapshot = TodoParser.parse(
+        "Call accountant @phone +taxes\n"
+        + "Review parser bootstrap +plain @work\n"
+    )
+    let doneSnapshot = TodoParser.parse("x 2026-05-20 Close sprint +plain\n")
+
+    let result = try TaskMutation.completeAndArchive(
+        at: 0,
+        in: todoSnapshot,
+        into: doneSnapshot,
+        completionDate: TodoDate(year: 2026, month: 5, day: 25)
+    )
+
+    #expect(result.archivedTaskCount == 1)
+    #expect(result.updatedTodoSnapshot.lines.map(\.rawText) == ["Review parser bootstrap +plain @work"])
+    #expect(result.updatedDoneSnapshot.lines.last?.rawText == "x 2026-05-25 Call accountant @phone +taxes")
+}
