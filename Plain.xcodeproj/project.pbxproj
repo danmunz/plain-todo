@@ -27,8 +27,10 @@
 		828636ABACEA537EA3AFEB6D /* CoordinatedTodoStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9763AECAAD6FEB1933CEB2C /* CoordinatedTodoStore.swift */; };
 		8D3699BD63DC4CAEC95A7B94 /* PlainApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9074C8EDC17EAC36F9AF7CD9 /* PlainApp.swift */; };
 		98DECBEE9FB063D2FBF142A6 /* PlainShellModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2AB15A3803A8B5693E9C7369 /* PlainShellModelTests.swift */; };
+		A105861484DC2ACD027C5415 /* DatePhraseParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CA591985F337DE78E0AFCF2 /* DatePhraseParserTests.swift */; };
 		AAC3DCF3D717401BE32BFE28 /* SortPreferenceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAC46F0B2392BCE31F3FF94F /* SortPreferenceStore.swift */; };
 		AAE302EE87317B5D9C755FEF /* TodoParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 365E9D42C7E0863B5E2809A5 /* TodoParser.swift */; };
+		AC00987BB4984A61CB51C43E /* DatePhraseParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B46FB930146E8B673C98711 /* DatePhraseParser.swift */; };
 		B328F742CC049904B1550A25 /* sample.txt in Resources */ = {isa = PBXBuildFile; fileRef = 7D51F145A39C103852A3747A /* sample.txt */; };
 		BED3890ADC573A574947D28F /* TodoSerializer.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0E190EF4603D5AD3528E1A7 /* TodoSerializer.swift */; };
 		CFE2790ED0C792C6EB3E4D0A /* CoordinatedTodoStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 977C67E1763A75558845983E /* CoordinatedTodoStoreTests.swift */; };
@@ -92,6 +94,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		0CA591985F337DE78E0AFCF2 /* DatePhraseParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatePhraseParserTests.swift; sourceTree = "<group>"; };
 		0E07E99BD43CA029CB6BEF84 /* simple.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = simple.txt; sourceTree = "<group>"; };
 		12A5C8D49E9A1233D55055BA /* ArchiveTransaction.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArchiveTransaction.swift; sourceTree = "<group>"; };
 		222CF9A9474B5CA29171C450 /* TodoSnapshotLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodoSnapshotLoader.swift; sourceTree = "<group>"; };
@@ -99,6 +102,7 @@
 		2AB15A3803A8B5693E9C7369 /* PlainShellModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlainShellModelTests.swift; sourceTree = "<group>"; };
 		365E9D42C7E0863B5E2809A5 /* TodoParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodoParser.swift; sourceTree = "<group>"; };
 		374BEC8118DDB9E142FF11EC /* TodoParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodoParserTests.swift; sourceTree = "<group>"; };
+		5B46FB930146E8B673C98711 /* DatePhraseParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatePhraseParser.swift; sourceTree = "<group>"; };
 		62688EA1E817DDE6AC9AF859 /* malformed.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = malformed.txt; sourceTree = "<group>"; };
 		6709428629AF9F777D14DC8F /* PlainCore.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = PlainCore.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		7159E50492A006589AA2699B /* WriteTransaction.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WriteTransaction.swift; sourceTree = "<group>"; };
@@ -168,6 +172,7 @@
 			isa = PBXGroup;
 			children = (
 				977C67E1763A75558845983E /* CoordinatedTodoStoreTests.swift */,
+				0CA591985F337DE78E0AFCF2 /* DatePhraseParserTests.swift */,
 				F19F2405E02739CB6B515BF5 /* FixtureLoader.swift */,
 				C1D921A0086C0CD0191AED79 /* TaskMutationTests.swift */,
 				374BEC8118DDB9E142FF11EC /* TodoParserTests.swift */,
@@ -232,6 +237,7 @@
 			children = (
 				12A5C8D49E9A1233D55055BA /* ArchiveTransaction.swift */,
 				E9763AECAAD6FEB1933CEB2C /* CoordinatedTodoStore.swift */,
+				5B46FB930146E8B673C98711 /* DatePhraseParser.swift */,
 				EC82247FB5E4D58AC83C0328 /* TaskMutation.swift */,
 				98CFF71F3274CEB6F4773117 /* TodoModels.swift */,
 				365E9D42C7E0863B5E2809A5 /* TodoParser.swift */,
@@ -424,6 +430,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				CFE2790ED0C792C6EB3E4D0A /* CoordinatedTodoStoreTests.swift in Sources */,
+				A105861484DC2ACD027C5415 /* DatePhraseParserTests.swift in Sources */,
 				7CE617DD1B3F0488924153CF /* FixtureLoader.swift in Sources */,
 				7C58F584336AE27FA729D700 /* TaskMutationTests.swift in Sources */,
 				79BBADDE670C8446196AC5DE /* TodoParserTests.swift in Sources */,
@@ -436,6 +443,7 @@
 			files = (
 				754565861B9DE94C5C607818 /* ArchiveTransaction.swift in Sources */,
 				828636ABACEA537EA3AFEB6D /* CoordinatedTodoStore.swift in Sources */,
+				AC00987BB4984A61CB51C43E /* DatePhraseParser.swift in Sources */,
 				06E727DAE7334DC7A93C5098 /* TaskMutation.swift in Sources */,
 				1E84D99EDEC87FE63978DEB9 /* TodoModels.swift in Sources */,
 				AAE302EE87317B5D9C755FEF /* TodoParser.swift in Sources */,

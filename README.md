@@ -5,7 +5,7 @@ Plain is a native macOS todo.txt client. The repo now supports both a SwiftPM bo
 ## Current Shape
 
 - `PlainCore` contains the parser, serializer, mutation layer, and coordinated file store.
-- `PlainApp` is a SwiftUI macOS app shell with onboarding, persisted file selection, sidebar-derived filters, per-view persisted sort modes, grouped sorted task views, a transient Cmd+F search overlay with live filtering and match highlighting, inline raw-line editing, keyboard selection, undo-backed add, complete, reprioritize, edit, delete, keyboard reorder, drag reorder, and archive flows, plus a read-only `done.txt` view, archive-behavior preferences, and non-modal external-change conflict handling.
+- `PlainApp` is a SwiftUI macOS app shell with onboarding, persisted file selection, sidebar-derived filters, per-view persisted sort modes, grouped sorted task views, a transient Cmd+F search overlay with live filtering and match highlighting, natural-language due-date preview in the add bar, inline raw-line editing, keyboard selection, undo-backed add, complete, reprioritize, edit, delete, keyboard reorder, drag reorder, and archive flows, plus a read-only `done.txt` view, archive-behavior preferences, and non-modal external-change conflict handling.
 - `PlainCoreTests`, `PlainAppTests`, and `PlainUITests` cover parser fidelity, coordinated file access, dual-file archive transactions, external-change handling, shell-model undo and selection behavior, and a basic app launch smoke path.
 
 ## Toolchain
@@ -64,7 +64,7 @@ The current bootstrap has working foundations but is not yet v1 complete:
 - PlainCore-first architecture
 - one coordinated read and write pipeline
 - sidebar-derived filters, per-view persisted sort modes, and persisted file choice
-- inline raw-line editing, keyboard row selection, grouped sorted task views, Cmd+F live search, UndoManager-backed destructive edits, keyboard and drag reorder, coordinated archive-to-`done.txt`, archive-behavior preferences, and reload-or-keep-mine conflict handling for external file changes
+- inline raw-line editing, keyboard row selection, grouped sorted task views, Cmd+F live search, natural-language due-date preview for new tasks, UndoManager-backed destructive edits, keyboard and drag reorder, coordinated archive-to-`done.txt`, archive-behavior preferences, and reload-or-keep-mine conflict handling for external file changes
 - Xcode-native app, unit-test, and UI-test path
 - no database or hidden persistence
-- no widget, menu bar, quick-add, diff view, bulk actions, natural-language add preview, or scratch pad yet
+- no widget, menu bar, quick-add, diff view, bulk actions, creation-date preferences, or scratch pad yet

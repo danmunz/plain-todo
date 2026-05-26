@@ -196,6 +196,10 @@ private struct PlainShellView: View {
         .accessibilityIdentifier("plain.onboarding")
     }
 
+    private var addTaskPreview: DatePhrasePreview? {
+        DatePhraseParser.preview(for: newTaskText)
+    }
+
     private var detailView: some View {
         Group {
             if model.selection == .done {
@@ -259,6 +263,24 @@ private struct PlainShellView: View {
             .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
             .padding(.horizontal, 20)
             .padding(.top, 16)
+
+            if let addTaskPreview {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Preview")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+
+                    Text(addTaskPreview.transformedText)
+                        .font(.caption.monospaced())
+                        .textSelection(.enabled)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+                .background(Color(nsColor: .controlBackgroundColor))
+                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .padding(.horizontal, 20)
+                .padding(.top, 8)
+            }
 
             if model.hasActiveSearch && !isSearchPresented {
                 searchFilterPill
@@ -1173,7 +1195,8 @@ final class PlainShellModel: ObservableObject {
         }
 
         do {
-            let transaction = try store.appendTask(rawText: rawText)
+            let parsedText = DatePhraseParser.preview(for: rawText)?.transformedText ?? rawText
+            let transaction = try store.appendTask(rawText: parsedText)
             apply(transaction: transaction)
             selectedRowID = transaction.updatedSnapshot.lines.last?.identity
             registerUndo(actionName: "Add Task", transaction: transaction, undoManager: undoManager)

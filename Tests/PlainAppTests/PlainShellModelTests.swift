@@ -1,3 +1,4 @@
+import PlainCore
 import XCTest
 @testable import Plain
 
@@ -41,6 +42,25 @@ final class PlainShellModelTests: XCTestCase {
 
         undoManager.redo()
         XCTAssertEqual(model.visibleRows.count, 2)
+    }
+
+    func testAddTaskTransformsNaturalLanguageDuePhraseBeforeWriting() throws {
+        let temporaryDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: temporaryDirectory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: temporaryDirectory) }
+
+        let fileURL = temporaryDirectory.appendingPathComponent("todo.txt")
+        try "Call accountant @phone +taxes\n".write(to: fileURL, atomically: true, encoding: .utf8)
+
+        let model = PlainShellModel()
+        model.open(url: fileURL)
+
+        let preview = try XCTUnwrap(DatePhraseParser.preview(for: "Review PR tomorrow @work +shipping"))
+        model.addTask(rawText: "Review PR tomorrow @work +shipping", undoManager: nil)
+
+        XCTAssertEqual(model.visibleRows.last?.rawText, preview.transformedText)
+        XCTAssertTrue(try String(contentsOf: fileURL, encoding: .utf8).contains(preview.transformedText))
     }
 
     func testMoveSelectionTracksVisibleRows() throws {
