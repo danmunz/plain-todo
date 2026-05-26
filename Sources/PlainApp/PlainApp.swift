@@ -1,3 +1,4 @@
+import Combine
 import PlainCore
 import SwiftUI
 import UniformTypeIdentifiers
@@ -992,12 +993,14 @@ final class PlainShellModel: ObservableObject {
     private let sessionRestore: SessionRestoreStore
     private let launchArguments: [String]
     private let isUITesting: Bool
+    private var cancellables: Set<AnyCancellable> = []
     private var store: CoordinatedTodoStore?
     private var isPersistedSourceEditable = false
     private var currentSourceURL: URL?
     private var currentPersistSelection = false
     private var draftState: DraftState = .none
     private var shouldRestoreSessionSelectionOnNextLoad = false
+    private var showCompletedTasks = true
 
     var isEditable: Bool {
         isPersistedSourceEditable
@@ -1055,7 +1058,16 @@ final class PlainShellModel: ObservableObject {
         self.sessionRestore = sessionRestore
         self.launchArguments = launchArguments
         self.isUITesting = isUITesting
+        self.showCompletedTasks = preferences.showCompletedTasks
         self.sortMode = sortPreferences.sortMode(for: .inbox)
+
+        preferences.$showCompletedTasks
+            .dropFirst()
+            .sink { [weak self] showCompletedTasks in
+            self?.showCompletedTasks = showCompletedTasks
+            self?.refreshPresentationState()
+            }
+            .store(in: &cancellables)
     }
 
     func loadInitialSnapshotIfNeeded() {
@@ -1539,17 +1551,54 @@ final class PlainShellModel: ObservableObject {
             return IndexedTask(index: index, line: line, task: task)
         }
 
+        refreshPresentationState(
+            sourceURL: sourceURL,
+            todoSnapshot: todoSnapshot,
+            archiveSnapshot: archiveSnapshot,
+            tasks: indexedTasks
+        )
+    }
+
+    private func refreshPresentationState() {
+        guard let snapshot, let currentSourceURL else {
+            return
+        }
+
+        let indexedTasks = snapshot.lines.enumerated().compactMap { index, line -> IndexedTask? in
+            guard let task = line.task else {
+                return nil
+            }
+
+            return IndexedTask(index: index, line: line, task: task)
+        }
+
+        refreshPresentationState(
+            sourceURL: currentSourceURL,
+            todoSnapshot: snapshot,
+            archiveSnapshot: archiveSnapshot ?? .empty,
+            tasks: indexedTasks
+        )
+    }
+
+    private func refreshPresentationState(
+        sourceURL: URL,
+        todoSnapshot: TodoFileSnapshot,
+        archiveSnapshot: TodoFileSnapshot,
+        tasks indexedTasks: [IndexedTask]
+    ) {
+
         let incompleteTasks = indexedTasks.filter { !$0.task.isCompleted }
         let completedTasks = indexedTasks.filter(\.task.isCompleted)
+        let visibleActiveTasks = showCompletedTasks ? indexedTasks : incompleteTasks
         let archivedTasks = archiveSnapshot.tasks
 
-        inboxCount = incompleteTasks.count
-        todayCount = incompleteTasks.filter { $0.dueBucket(relativeTo: Date()) == .today }.count
-        overdueCount = incompleteTasks.filter { $0.dueBucket(relativeTo: Date()) == .overdue }.count
+        inboxCount = visibleActiveTasks.count
+        todayCount = visibleActiveTasks.filter { $0.dueBucket(relativeTo: Date()) == .today }.count
+        overdueCount = visibleActiveTasks.filter { $0.dueBucket(relativeTo: Date()) == .overdue }.count
         doneCount = archivedTasks.count
         archivableCompletedTaskCount = completedTasks.count
-        projectCounts = buildTagCounts(from: incompleteTasks, keyPath: \.task.projects)
-        contextCounts = buildTagCounts(from: incompleteTasks, keyPath: \.task.contexts)
+        projectCounts = buildTagCounts(from: visibleActiveTasks, keyPath: \.task.projects)
+        contextCounts = buildTagCounts(from: visibleActiveTasks, keyPath: \.task.contexts)
         sourceDescription = sourceLabel(for: sourceURL, snapshot: todoSnapshot)
 
         if shouldRestoreSessionSelectionOnNextLoad {
@@ -1935,6 +1984,7 @@ final class PlainShellModel: ObservableObject {
         if sortMode != .fileOrder {
             return tasks
                 .filter(matchesSelection)
+                .filter(isVisibleInActiveViews)
                 .sorted(by: sortComparator)
                 .map(makeRow)
         }
@@ -1943,7 +1993,7 @@ final class PlainShellModel: ObservableObject {
             let indexedTask = tasks.first { $0.index == index }
 
             if let indexedTask {
-                guard matchesSelection(indexedTask) else {
+                guard matchesSelection(indexedTask), isVisibleInActiveViews(indexedTask) else {
                     return nil
                 }
 
@@ -2062,18 +2112,22 @@ final class PlainShellModel: ObservableObject {
     private func matchesSelection(_ indexedTask: IndexedTask) -> Bool {
         switch selection {
         case .inbox:
-            return !indexedTask.task.isCompleted
+            return true
         case .today:
-            return !indexedTask.task.isCompleted && indexedTask.dueBucket(relativeTo: Date()) == .today
+            return indexedTask.dueBucket(relativeTo: Date()) == .today
         case .overdue:
-            return !indexedTask.task.isCompleted && indexedTask.dueBucket(relativeTo: Date()) == .overdue
+            return indexedTask.dueBucket(relativeTo: Date()) == .overdue
         case .done:
             return false
         case let .project(project):
-            return !indexedTask.task.isCompleted && indexedTask.task.projects.contains(project)
+            return indexedTask.task.projects.contains(project)
         case let .context(context):
-            return !indexedTask.task.isCompleted && indexedTask.task.contexts.contains(context)
+            return indexedTask.task.contexts.contains(context)
         }
+    }
+
+    private func isVisibleInActiveViews(_ indexedTask: IndexedTask) -> Bool {
+        showCompletedTasks || !indexedTask.task.isCompleted
     }
 
     private func sourceLabel(for url: URL, snapshot: TodoFileSnapshot) -> String {

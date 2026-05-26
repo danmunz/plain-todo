@@ -32,9 +32,16 @@ final class PreferencesStore: ObservableObject {
         }
     }
 
+    @Published var showCompletedTasks: Bool {
+        didSet {
+            userDefaults.set(showCompletedTasks, forKey: showCompletedTasksKey)
+        }
+    }
+
     private let userDefaults: UserDefaults
     private let archiveBehaviorKey = "PlainArchiveBehavior"
     private let automaticallyAddCreationDateKey = "PlainAutomaticallyAddCreationDate"
+    private let showCompletedTasksKey = "PlainShowCompletedTasks"
 
     init(userDefaults: UserDefaults = .standard) {
         self.userDefaults = userDefaults
@@ -50,6 +57,12 @@ final class PreferencesStore: ObservableObject {
             self.automaticallyAddCreationDate = true
         } else {
             self.automaticallyAddCreationDate = userDefaults.bool(forKey: automaticallyAddCreationDateKey)
+        }
+
+        if userDefaults.object(forKey: showCompletedTasksKey) == nil {
+            self.showCompletedTasks = true
+        } else {
+            self.showCompletedTasks = userDefaults.bool(forKey: showCompletedTasksKey)
         }
     }
 }
@@ -67,6 +80,7 @@ struct PreferencesView: View {
             .pickerStyle(.radioGroup)
 
             Toggle("Automatically add creation date to new tasks", isOn: $preferences.automaticallyAddCreationDate)
+            Toggle("Show completed tasks", isOn: $preferences.showCompletedTasks)
         }
         .padding(20)
         .frame(minWidth: 380)

@@ -160,6 +160,20 @@ final class PlainShellModelTests: XCTestCase {
         XCTAssertFalse(secondStore.automaticallyAddCreationDate)
     }
 
+    func testShowCompletedPreferencePersistsAcrossStoreInstances() {
+        let suiteName = "ShowCompletedPreferenceTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let firstStore = PreferencesStore(userDefaults: defaults)
+        XCTAssertTrue(firstStore.showCompletedTasks)
+        firstStore.showCompletedTasks = false
+
+        let secondStore = PreferencesStore(userDefaults: defaults)
+        XCTAssertFalse(secondStore.showCompletedTasks)
+    }
+
     func testSessionRestoreStoreRoundTripsSourcePathAndSelection() {
         let (sessionRestore, defaults, suiteName) = makeSessionRestoreStore()
         defer { defaults.removePersistentDomain(forName: suiteName) }
@@ -630,8 +644,63 @@ final class PlainShellModelTests: XCTestCase {
 
         let todoText = try String(contentsOf: todoURL, encoding: .utf8)
         XCTAssertTrue(todoText.hasPrefix("x "))
+        XCTAssertEqual(model.visibleRows.count, 1)
+        XCTAssertTrue(model.visibleRows.first?.isCompleted == true)
         XCTAssertEqual(model.archivableCompletedTaskCount, 1)
         XCTAssertEqual(model.doneCount, 0)
+    }
+
+    func testShowCompletedPreferenceCanHideCompletedRowsWithoutArchivingThem() throws {
+        let (preferences, defaults, suiteName) = makePreferencesStore()
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let temporaryDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: temporaryDirectory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: temporaryDirectory) }
+
+        let todoURL = temporaryDirectory.appendingPathComponent("todo.txt")
+        try "Call accountant @phone +taxes\n".write(to: todoURL, atomically: true, encoding: .utf8)
+
+        let model = PlainShellModel(preferences: preferences)
+        model.open(url: todoURL)
+        let identity = try XCTUnwrap(model.visibleRows.first?.id)
+
+        model.toggleCompletion(lineIdentity: identity, undoManager: nil)
+        preferences.showCompletedTasks = false
+
+        XCTAssertTrue(model.visibleRows.isEmpty)
+        XCTAssertEqual(model.archivableCompletedTaskCount, 1)
+        XCTAssertTrue(try String(contentsOf: todoURL, encoding: .utf8).hasPrefix("x "))
+    }
+
+    func testCompletedRowsRespectShowCompletedPreferenceInsideProjectView() throws {
+        let (preferences, defaults, suiteName) = makePreferencesStore()
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let temporaryDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: temporaryDirectory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: temporaryDirectory) }
+
+        let todoURL = temporaryDirectory.appendingPathComponent("todo.txt")
+        try "Review parser +plain\nInbox cleanup +ops\n".write(to: todoURL, atomically: true, encoding: .utf8)
+
+        let model = PlainShellModel(preferences: preferences)
+        model.open(url: todoURL)
+        model.selection = .project("plain")
+        let identity = try XCTUnwrap(model.visibleRows.first?.id)
+
+        model.toggleCompletion(lineIdentity: identity, undoManager: nil)
+        XCTAssertEqual(model.visibleRows.count, 1)
+        XCTAssertTrue(model.visibleRows.first?.isCompleted == true)
+        XCTAssertTrue(model.visibleRows.first?.rawText.contains("+plain") == true)
+
+        preferences.showCompletedTasks = false
+
+        XCTAssertTrue(model.visibleRows.isEmpty)
+        XCTAssertFalse(model.projectCounts.contains(where: { $0.name == "plain" }))
+        XCTAssertEqual(model.archivableCompletedTaskCount, 1)
     }
 
     func testAutomaticArchiveModeMovesCompletedTaskIntoDoneFile() throws {
@@ -898,16 +967,18 @@ final class PlainShellModelTests: XCTestCase {
         model.moveVisibleRows(fromOffsets: IndexSet(integer: 0), toOffset: 2, undoManager: undoManager)
 
         XCTAssertEqual(model.visibleRows.map(\.rawText), [
-            "Review parser bootstrap +plain @work",
+            "x 2026-05-20 archived item",
             "Call accountant @phone +taxes",
+            "Review parser bootstrap +plain @work",
             "Schedule dentist @phone +health"
         ])
-        XCTAssertEqual(try String(contentsOf: todoURL, encoding: .utf8), "Review parser bootstrap +plain @work\nx 2026-05-20 archived item\nCall accountant @phone +taxes\nSchedule dentist @phone +health\n")
+        XCTAssertEqual(try String(contentsOf: todoURL, encoding: .utf8), "x 2026-05-20 archived item\nCall accountant @phone +taxes\nReview parser bootstrap +plain @work\nSchedule dentist @phone +health\n")
 
         undoManager.undo()
 
         XCTAssertEqual(model.visibleRows.map(\.rawText), [
             "Call accountant @phone +taxes",
+            "x 2026-05-20 archived item",
             "Review parser bootstrap +plain @work",
             "Schedule dentist @phone +health"
         ])
