@@ -275,108 +275,20 @@ private struct PlainShellView: View {
             }
 
             List(selection: $model.selectedRowID) {
-                ForEach(model.visibleRows) { row in
-                    HStack {
-                        Button {
-                            model.toggleCompletion(lineIdentity: row.id, undoManager: undoManager)
-                        } label: {
-                            Image(systemName: row.isCompleted ? "checkmark.circle.fill" : "circle")
-                                .foregroundStyle(row.isCompleted ? .secondary : .tertiary)
-                        }
-                        .buttonStyle(.plain)
-                        .disabled(!model.isEditable)
-
-                        VStack(alignment: .leading, spacing: 6) {
-                            if editingRowID == row.id {
-                                TextField("Edit line", text: $editingRawText)
-                                    .textFieldStyle(.roundedBorder)
-                                    .focused($focusedField, equals: .inlineEdit)
-                                    .onSubmit {
-                                        commitInlineEdit(for: row.id)
-                                    }
-
-                                HStack(spacing: 10) {
-                                    Button("Save") {
-                                        commitInlineEdit(for: row.id)
-                                    }
-                                    Button("Cancel") {
-                                        cancelInlineEdit()
-                                    }
-                                    .keyboardShortcut(.cancelAction)
-                                }
-                                .font(.caption)
-                            } else {
-                                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                                    if let priority = row.priority {
-                                        Text("(\(priority))")
-                                            .font(.callout.weight(.semibold))
-                                            .foregroundStyle(.orange)
-                                    }
-
-                                    HighlightedText(
-                                        text: row.title,
-                                        query: model.activeSearchQuery,
-                                        font: .body,
-                                        strikethrough: row.isCompleted
-                                    )
-
-                                    Spacer()
-
-                                    if let dueLabel = row.dueLabel {
-                                        Text(dueLabel)
-                                            .font(.caption.weight(.medium))
-                                            .foregroundStyle(row.isOverdue ? .red : .secondary)
-                                    }
-
-                                    Menu {
-                                        Button("Edit") {
-                                            startInlineEdit(for: row)
-                                        }
-                                        Divider()
-                                        Button("Priority A") {
-                                            model.setPriority("A", lineIdentity: row.id, undoManager: undoManager)
-                                        }
-                                        Button("Priority B") {
-                                            model.setPriority("B", lineIdentity: row.id, undoManager: undoManager)
-                                        }
-                                        Button("Priority C") {
-                                            model.setPriority("C", lineIdentity: row.id, undoManager: undoManager)
-                                        }
-                                        Button("Clear Priority") {
-                                            model.setPriority(nil, lineIdentity: row.id, undoManager: undoManager)
-                                        }
-                                        Divider()
-                                        Button("Delete", role: .destructive) {
-                                            model.deleteRow(lineIdentity: row.id, undoManager: undoManager)
-                                        }
-                                        Divider()
-                                        Button("Move Up") {
-                                            model.moveRow(lineIdentity: row.id, by: -1, undoManager: undoManager)
-                                        }
-                                        .disabled(!model.canMove(lineIdentity: row.id, by: -1))
-                                        Button("Move Down") {
-                                            model.moveRow(lineIdentity: row.id, by: 1, undoManager: undoManager)
-                                        }
-                                        .disabled(!model.canMove(lineIdentity: row.id, by: 1))
-                                    } label: {
-                                        Image(systemName: "ellipsis.circle")
-                                            .foregroundStyle(.secondary)
-                                    }
-                                    .disabled(!model.isEditable)
-                                }
-
-                                HighlightedText(
-                                    text: row.rawText,
-                                    query: model.activeSearchQuery,
-                                    font: .caption.monospaced(),
-                                    foregroundStyle: .secondary
-                                )
-                                .textSelection(.enabled)
+                ForEach(model.visibleGroups) { group in
+                    if let title = group.title {
+                        Section {
+                            ForEach(group.rows) { row in
+                                activeTaskRow(row)
                             }
+                        } header: {
+                            GroupHeader(title: title)
+                        }
+                    } else {
+                        ForEach(group.rows) { row in
+                            activeTaskRow(row)
                         }
                     }
-                    .padding(.vertical, 4)
-                    .tag(row.id)
                 }
             }
             .listStyle(.inset)
@@ -429,6 +341,110 @@ private struct PlainShellView: View {
             .padding(.vertical, 12)
             .background(Color(nsColor: .windowBackgroundColor))
         }
+    }
+
+    private func activeTaskRow(_ row: PlainShellModel.Row) -> some View {
+        HStack {
+            Button {
+                model.toggleCompletion(lineIdentity: row.id, undoManager: undoManager)
+            } label: {
+                Image(systemName: row.isCompleted ? "checkmark.circle.fill" : "circle")
+                    .foregroundStyle(row.isCompleted ? .secondary : .tertiary)
+            }
+            .buttonStyle(.plain)
+            .disabled(!model.isEditable)
+
+            VStack(alignment: .leading, spacing: 6) {
+                if editingRowID == row.id {
+                    TextField("Edit line", text: $editingRawText)
+                        .textFieldStyle(.roundedBorder)
+                        .focused($focusedField, equals: .inlineEdit)
+                        .onSubmit {
+                            commitInlineEdit(for: row.id)
+                        }
+
+                    HStack(spacing: 10) {
+                        Button("Save") {
+                            commitInlineEdit(for: row.id)
+                        }
+                        Button("Cancel") {
+                            cancelInlineEdit()
+                        }
+                        .keyboardShortcut(.cancelAction)
+                    }
+                    .font(.caption)
+                } else {
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        if let priority = row.priority {
+                            Text("(\(priority))")
+                                .font(.callout.weight(.semibold))
+                                .foregroundStyle(.orange)
+                        }
+
+                        HighlightedText(
+                            text: row.title,
+                            query: model.activeSearchQuery,
+                            font: .body,
+                            strikethrough: row.isCompleted
+                        )
+
+                        Spacer()
+
+                        if let dueLabel = row.dueLabel {
+                            Text(dueLabel)
+                                .font(.caption.weight(.medium))
+                                .foregroundStyle(row.isOverdue ? .red : .secondary)
+                        }
+
+                        Menu {
+                            Button("Edit") {
+                                startInlineEdit(for: row)
+                            }
+                            Divider()
+                            Button("Priority A") {
+                                model.setPriority("A", lineIdentity: row.id, undoManager: undoManager)
+                            }
+                            Button("Priority B") {
+                                model.setPriority("B", lineIdentity: row.id, undoManager: undoManager)
+                            }
+                            Button("Priority C") {
+                                model.setPriority("C", lineIdentity: row.id, undoManager: undoManager)
+                            }
+                            Button("Clear Priority") {
+                                model.setPriority(nil, lineIdentity: row.id, undoManager: undoManager)
+                            }
+                            Divider()
+                            Button("Delete", role: .destructive) {
+                                model.deleteRow(lineIdentity: row.id, undoManager: undoManager)
+                            }
+                            Divider()
+                            Button("Move Up") {
+                                model.moveRow(lineIdentity: row.id, by: -1, undoManager: undoManager)
+                            }
+                            .disabled(!model.canMove(lineIdentity: row.id, by: -1))
+                            Button("Move Down") {
+                                model.moveRow(lineIdentity: row.id, by: 1, undoManager: undoManager)
+                            }
+                            .disabled(!model.canMove(lineIdentity: row.id, by: 1))
+                        } label: {
+                            Image(systemName: "ellipsis.circle")
+                                .foregroundStyle(.secondary)
+                        }
+                        .disabled(!model.isEditable)
+                    }
+
+                    HighlightedText(
+                        text: row.rawText,
+                        query: model.activeSearchQuery,
+                        font: .caption.monospaced(),
+                        foregroundStyle: .secondary
+                    )
+                    .textSelection(.enabled)
+                }
+            }
+        }
+        .padding(.vertical, 4)
+        .tag(row.id)
     }
 
     private var archiveDetailView: some View {
@@ -780,6 +796,22 @@ private struct HighlightedText: View {
     }
 }
 
+private struct GroupHeader: View {
+    let title: String
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Text(title)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+            Rectangle()
+                .fill(Color.secondary.opacity(0.2))
+                .frame(height: 1)
+        }
+        .textCase(nil)
+    }
+}
+
 private struct PlaceholderCard: View {
     let title: String
     let systemImage: String
@@ -870,9 +902,16 @@ final class PlainShellModel: ObservableObject {
         let title: String
         let rawText: String
         let priority: String?
+        let creationDate: TodoDate?
         let isCompleted: Bool
         let dueLabel: String?
         let isOverdue: Bool
+    }
+
+    struct RowGroup: Identifiable {
+        let id: String
+        let title: String?
+        let rows: [Row]
     }
 
     @Published var selection: SidebarSelection = .inbox {
@@ -887,6 +926,7 @@ final class PlainShellModel: ObservableObject {
     @Published private(set) var snapshot: TodoFileSnapshot?
     @Published private(set) var archiveSnapshot: TodoFileSnapshot?
     @Published private(set) var visibleRows: [Row] = []
+    @Published private(set) var visibleGroups: [RowGroup] = []
     @Published private(set) var sourceDescription = "Loading sample snapshot"
     @Published private(set) var loadError: String?
     @Published private(set) var transientError: String?
@@ -1022,6 +1062,7 @@ final class PlainShellModel: ObservableObject {
         snapshot = nil
         archiveSnapshot = nil
         visibleRows = []
+        visibleGroups = []
         projectCounts = []
         contextCounts = []
         inboxCount = 0
@@ -1588,6 +1629,8 @@ final class PlainShellModel: ObservableObject {
             visibleRows = applySearchFilter(to: buildVisibleRows(from: todoSnapshot, tasks: indexedTasks))
         }
 
+        visibleGroups = buildVisibleGroups(from: visibleRows)
+
         if let selectedRowID, visibleRows.contains(where: { $0.id == selectedRowID }) {
             self.selectedRowID = selectedRowID
         } else {
@@ -1618,6 +1661,90 @@ final class PlainShellModel: ObservableObject {
         return rows.filter { $0.rawText.localizedCaseInsensitiveContains(activeSearchQuery) }
     }
 
+    private func buildVisibleGroups(from rows: [Row]) -> [RowGroup] {
+        guard selection != .done else {
+            return [RowGroup(id: "flat", title: nil, rows: rows)]
+        }
+
+        switch sortMode {
+        case .fileOrder, .alphabetical:
+            return [RowGroup(id: "flat", title: nil, rows: rows)]
+        case .priority:
+            return Dictionary(grouping: rows) { priorityGroupTitle(for: $0) }
+                .sorted { lhs, rhs in priorityGroupRank(lhs.key) < priorityGroupRank(rhs.key) }
+                .map { title, groupedRows in
+                    RowGroup(id: title, title: title, rows: groupedRows)
+                }
+        case .creationDate:
+            return Dictionary(grouping: rows) { creationDateGroupTitle(for: $0.creationDate, relativeTo: Date()) }
+                .sorted { lhs, rhs in creationDateGroupRank(lhs.key) < creationDateGroupRank(rhs.key) }
+                .map { title, groupedRows in
+                    RowGroup(id: title, title: title, rows: groupedRows)
+                }
+        }
+    }
+
+    private func priorityGroupTitle(for row: Row) -> String {
+        guard let priority = row.priority else {
+            return "No Priority"
+        }
+
+        return "Priority \(priority)"
+    }
+
+    private func priorityGroupRank(_ title: String) -> Int {
+        guard title != "No Priority",
+              let scalar = title.last?.asciiValue
+        else {
+            return Int.max
+        }
+
+        return Int(scalar)
+    }
+
+    private func creationDateGroupTitle(for creationDate: TodoDate?, relativeTo now: Date) -> String {
+        guard let creationDate, let date = date(from: creationDate) else {
+            return "No Date"
+        }
+
+        let calendar = Calendar(identifier: .gregorian)
+        if calendar.isDate(date, inSameDayAs: now) {
+            return "Today"
+        }
+
+        if calendar.isDate(date, equalTo: now, toGranularity: .weekOfYear) {
+            return date > now ? "Later" : "This Week"
+        }
+
+        return date > now ? "Later" : "Earlier"
+    }
+
+    private func creationDateGroupRank(_ title: String) -> Int {
+        switch title {
+        case "Today":
+            return 0
+        case "This Week":
+            return 1
+        case "Earlier":
+            return 2
+        case "Later":
+            return 3
+        case "No Date":
+            return 4
+        default:
+            return 5
+        }
+    }
+
+    private func date(from todoDate: TodoDate) -> Date? {
+        var components = DateComponents()
+        components.calendar = Calendar(identifier: .gregorian)
+        components.year = todoDate.year
+        components.month = todoDate.month
+        components.day = todoDate.day
+        return components.date
+    }
+
     private func buildVisibleRows(from snapshot: TodoFileSnapshot, tasks: [IndexedTask]) -> [Row] {
         if sortMode != .fileOrder {
             return tasks
@@ -1640,6 +1767,7 @@ final class PlainShellModel: ObservableObject {
                     title: indexedTask.task.body.isEmpty ? line.rawText : indexedTask.task.body,
                     rawText: line.rawText,
                     priority: indexedTask.task.priority.map(String.init),
+                    creationDate: indexedTask.task.creationDate,
                     isCompleted: indexedTask.task.isCompleted,
                     dueLabel: indexedTask.dueLabel(relativeTo: Date()),
                     isOverdue: indexedTask.dueBucket(relativeTo: Date()) == .overdue
@@ -1656,6 +1784,7 @@ final class PlainShellModel: ObservableObject {
                 title: line.rawText.isEmpty ? "Blank line" : line.rawText,
                 rawText: line.rawText,
                 priority: nil,
+                creationDate: nil,
                 isCompleted: false,
                 dueLabel: nil,
                 isOverdue: false
@@ -1670,6 +1799,7 @@ final class PlainShellModel: ObservableObject {
             title: indexedTask.task.body.isEmpty ? indexedTask.line.rawText : indexedTask.task.body,
             rawText: indexedTask.line.rawText,
             priority: indexedTask.task.priority.map(String.init),
+            creationDate: indexedTask.task.creationDate,
             isCompleted: indexedTask.task.isCompleted,
             dueLabel: indexedTask.dueLabel(relativeTo: Date()),
             isOverdue: indexedTask.dueBucket(relativeTo: Date()) == .overdue
@@ -1735,6 +1865,7 @@ final class PlainShellModel: ObservableObject {
                 title: task.body.isEmpty ? line.rawText : task.body,
                 rawText: line.rawText,
                 priority: task.priority.map(String.init),
+                creationDate: task.creationDate,
                 isCompleted: true,
                 dueLabel: indexedTask.dueLabel(relativeTo: Date()),
                 isOverdue: false

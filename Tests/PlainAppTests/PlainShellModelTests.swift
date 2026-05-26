@@ -325,6 +325,79 @@ final class PlainShellModelTests: XCTestCase {
         ])
     }
 
+    func testPrioritySortBuildsPriorityGroups() throws {
+        let (sortPreferences, defaults, suiteName) = makeSortPreferenceStore()
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let temporaryDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: temporaryDirectory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: temporaryDirectory) }
+
+        let todoURL = temporaryDirectory.appendingPathComponent("todo.txt")
+        try "(B) beta task\n(A) alpha task\ngamma task\n".write(to: todoURL, atomically: true, encoding: .utf8)
+
+        let model = PlainShellModel(sortPreferences: sortPreferences)
+        model.open(url: todoURL)
+        model.setSortMode(.priority)
+
+        XCTAssertEqual(model.visibleGroups.map(\.title), ["Priority A", "Priority B", "No Priority"])
+        XCTAssertEqual(model.visibleGroups[0].rows.map(\.rawText), ["(A) alpha task"])
+        XCTAssertEqual(model.visibleGroups[1].rows.map(\.rawText), ["(B) beta task"])
+        XCTAssertEqual(model.visibleGroups[2].rows.map(\.rawText), ["gamma task"])
+    }
+
+    func testAlphabeticalSortRemainsFlatWithoutGroupHeaders() throws {
+        let (sortPreferences, defaults, suiteName) = makeSortPreferenceStore()
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let temporaryDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: temporaryDirectory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: temporaryDirectory) }
+
+        let todoURL = temporaryDirectory.appendingPathComponent("todo.txt")
+        try "zeta task\nalpha task\n".write(to: todoURL, atomically: true, encoding: .utf8)
+
+        let model = PlainShellModel(sortPreferences: sortPreferences)
+        model.open(url: todoURL)
+        model.setSortMode(.alphabetical)
+
+        XCTAssertEqual(model.visibleGroups.count, 1)
+        XCTAssertNil(model.visibleGroups.first?.title)
+        XCTAssertEqual(model.visibleGroups.first?.rows.map(\.rawText), ["alpha task", "zeta task"])
+    }
+
+    func testCreationDateSortBuildsRecencyGroups() throws {
+        let (sortPreferences, defaults, suiteName) = makeSortPreferenceStore()
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let temporaryDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: temporaryDirectory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: temporaryDirectory) }
+
+        let calendar = Calendar(identifier: .gregorian)
+        let now = Date()
+        let today = calendar.startOfDay(for: now)
+        let thisWeek = calendar.date(byAdding: .day, value: -2, to: today) ?? today
+        let earlier = calendar.date(byAdding: .day, value: -10, to: today) ?? today
+
+        let formatter = DateFormatter()
+        formatter.calendar = calendar
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd"
+
+        let todoURL = temporaryDirectory.appendingPathComponent("todo.txt")
+        try "\(formatter.string(from: today)) today task\n\(formatter.string(from: thisWeek)) this week task\n\(formatter.string(from: earlier)) earlier task\nundated task\n".write(to: todoURL, atomically: true, encoding: .utf8)
+
+        let model = PlainShellModel(sortPreferences: sortPreferences)
+        model.open(url: todoURL)
+        model.setSortMode(.creationDate)
+
+        XCTAssertEqual(model.visibleGroups.map(\.title), ["Today", "This Week", "Earlier", "No Date"])
+    }
+
     func testManualArchiveModeLeavesCompletedTaskInTodoFile() throws {
         let (preferences, defaults, suiteName) = makePreferencesStore()
         defer { defaults.removePersistentDomain(forName: suiteName) }
