@@ -5,6 +5,7 @@ import UniformTypeIdentifiers
 private enum FocusField: Hashable {
     case newTask
     case inlineEdit
+    case search
 }
 
 @main
@@ -27,7 +28,9 @@ private struct PlainShellView: View {
     @Environment(\.undoManager) private var undoManager
     @State private var isFileImporterPresented = false
     @State private var isArchiveConfirmationPresented = false
+    @State private var isSearchPresented = false
     @State private var newTaskText = ""
+    @State private var searchText = ""
     @State private var editingRowID: LineIdentity?
     @State private var editingRawText = ""
     @FocusState private var focusedField: FocusField?
@@ -98,6 +101,9 @@ private struct PlainShellView: View {
         .onChange(of: editingRawText) { _, updatedValue in
             model.updateDraftState(newTaskText: newTaskText, editingRowID: editingRowID, editingRawText: updatedValue)
         }
+        .onChange(of: searchText) { _, updatedValue in
+            model.setSearchQuery(updatedValue)
+        }
         .onChange(of: model.draftResetToken) { _, _ in
             resetDraftUI()
         }
@@ -166,6 +172,12 @@ private struct PlainShellView: View {
         }
         .task {
             model.loadInitialSnapshotIfNeeded()
+        }
+        .overlay(alignment: .top) {
+            if isSearchPresented {
+                searchOverlay
+                    .padding(.top, 76)
+            }
         }
     }
 
@@ -248,6 +260,12 @@ private struct PlainShellView: View {
             .padding(.horizontal, 20)
             .padding(.top, 16)
 
+            if model.hasActiveSearch && !isSearchPresented {
+                searchFilterPill
+                    .padding(.horizontal, 20)
+                    .padding(.top, 10)
+            }
+
             if !model.isEditable {
                 Text("Editing is disabled for the bundled sample. Open a writable todo.txt file to try the write path.")
                     .font(.caption)
@@ -295,9 +313,12 @@ private struct PlainShellView: View {
                                             .foregroundStyle(.orange)
                                     }
 
-                                    Text(row.title)
-                                        .font(.body)
-                                        .strikethrough(row.isCompleted)
+                                    HighlightedText(
+                                        text: row.title,
+                                        query: model.activeSearchQuery,
+                                        font: .body,
+                                        strikethrough: row.isCompleted
+                                    )
 
                                     Spacer()
 
@@ -344,10 +365,13 @@ private struct PlainShellView: View {
                                     .disabled(!model.isEditable)
                                 }
 
-                                Text(row.rawText)
-                                    .font(.caption.monospaced())
-                                    .foregroundStyle(.secondary)
-                                    .textSelection(.enabled)
+                                HighlightedText(
+                                    text: row.rawText,
+                                    query: model.activeSearchQuery,
+                                    font: .caption.monospaced(),
+                                    foregroundStyle: .secondary
+                                )
+                                .textSelection(.enabled)
                             }
                         }
                     }
@@ -374,8 +398,8 @@ private struct PlainShellView: View {
                 model.deleteRow(lineIdentity: selectedRowID, undoManager: undoManager)
             }
             .onExitCommand {
-                if model.selection == .done {
-                    model.selection = .inbox
+                if isSearchPresented || focusedField == .search {
+                    dismissSearchOverlay(keepingFilter: false)
                 } else if editingRowID != nil {
                     cancelInlineEdit()
                 } else {
@@ -388,9 +412,9 @@ private struct PlainShellView: View {
             .overlay {
                 if model.visibleRows.isEmpty {
                     PlaceholderCard(
-                        title: "Nothing here yet",
+                        title: model.hasActiveSearch ? "No matching tasks" : "Nothing here yet",
                         systemImage: "line.3.horizontal.decrease.circle",
-                        message: "This view is empty for the current filter."
+                        message: model.hasActiveSearch ? "Try a different search or clear the active filter." : "This view is empty for the current filter."
                     )
                 }
             }
@@ -428,6 +452,12 @@ private struct PlainShellView: View {
             .padding(.horizontal, 20)
             .padding(.top, 20)
 
+            if model.hasActiveSearch && !isSearchPresented {
+                searchFilterPill
+                    .padding(.horizontal, 20)
+                    .padding(.top, 12)
+            }
+
             List(model.visibleRows) { row in
                 HStack {
                     Image(systemName: "checkmark.circle.fill")
@@ -441,9 +471,12 @@ private struct PlainShellView: View {
                                     .foregroundStyle(.orange)
                             }
 
-                            Text(row.title)
-                                .font(.body)
-                                .strikethrough(true)
+                            HighlightedText(
+                                text: row.title,
+                                query: model.activeSearchQuery,
+                                font: .body,
+                                strikethrough: true
+                            )
 
                             Spacer()
 
@@ -454,10 +487,14 @@ private struct PlainShellView: View {
                             }
                         }
 
-                        Text(row.rawText)
-                            .font(.caption.monospaced())
-                            .foregroundStyle(.secondary)
-                            .textSelection(.enabled)
+                        HighlightedText(
+                            text: row.rawText,
+                            query: model.activeSearchQuery,
+                            font: .caption.monospaced(),
+                            foregroundStyle: .secondary,
+                            strikethrough: true
+                        )
+                        .textSelection(.enabled)
                     }
                 }
                 .padding(.vertical, 4)
@@ -466,14 +503,18 @@ private struct PlainShellView: View {
             .listStyle(.inset)
             .accessibilityIdentifier("plain.done.list")
             .onExitCommand {
-                model.selection = .inbox
+                if isSearchPresented || focusedField == .search {
+                    dismissSearchOverlay(keepingFilter: false)
+                } else {
+                    model.selection = .inbox
+                }
             }
             .overlay {
                 if model.visibleRows.isEmpty {
                     PlaceholderCard(
-                        title: "Nothing archived yet",
+                        title: model.hasActiveSearch ? "No matching archived tasks" : "Nothing archived yet",
                         systemImage: "archivebox",
-                        message: "Archive completed tasks to move them into done.txt."
+                        message: model.hasActiveSearch ? "Try a different search or clear the active filter." : "Archive completed tasks to move them into done.txt."
                     )
                 }
             }
@@ -550,6 +591,11 @@ private struct PlainShellView: View {
 
     private var keyboardShortcutActions: some View {
         VStack {
+            Button("Show Search") {
+                presentSearchOverlay()
+            }
+            .keyboardShortcut("f")
+
             Button("Toggle Selected Completion") {
                 guard focusedField == nil,
                       let selectedRowID = model.selectedRowID
@@ -604,6 +650,133 @@ private struct PlainShellView: View {
         .frame(width: 0, height: 0)
         .clipped()
         .opacity(0.001)
+    }
+
+    private var searchOverlay: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "magnifyingglass")
+                .foregroundStyle(.secondary)
+
+            TextField("Search tasks", text: $searchText)
+                .textFieldStyle(.plain)
+                .focused($focusedField, equals: .search)
+                .onSubmit {
+                    dismissSearchOverlay(keepingFilter: true)
+                }
+
+            if !searchText.isEmpty {
+                Button {
+                    searchText = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .frame(maxWidth: 420)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(Color.primary.opacity(0.08), lineWidth: 1)
+        )
+        .shadow(color: Color.black.opacity(0.08), radius: 16, x: 0, y: 8)
+        .padding(.horizontal, 24)
+        .onAppear {
+            DispatchQueue.main.async {
+                focusedField = .search
+            }
+        }
+    }
+
+    private var searchFilterPill: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "magnifyingglass")
+                .font(.caption.weight(.semibold))
+            Text("Showing results for \"\(model.activeSearchQuery)\"")
+                .font(.caption.weight(.medium))
+            Button {
+                clearSearch()
+            } label: {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.caption)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(Color(nsColor: .controlBackgroundColor), in: Capsule())
+    }
+
+    private func presentSearchOverlay() {
+        isSearchPresented = true
+        if model.hasActiveSearch {
+            searchText = model.activeSearchQuery
+        }
+
+        DispatchQueue.main.async {
+            focusedField = .search
+        }
+    }
+
+    private func dismissSearchOverlay(keepingFilter: Bool) {
+        if !keepingFilter {
+            clearSearch()
+        }
+
+        isSearchPresented = false
+        focusedField = nil
+    }
+
+    private func clearSearch() {
+        searchText = ""
+        model.clearSearch()
+    }
+}
+
+private struct HighlightedText: View {
+    let text: String
+    let query: String
+    let font: Font
+    var foregroundStyle: Color = .primary
+    var strikethrough = false
+
+    var body: some View {
+        if let matchRange = matchRange {
+            let prefix = String(text[..<matchRange.lowerBound])
+            let match = String(text[matchRange])
+            let suffix = String(text[matchRange.upperBound...])
+
+            HStack(spacing: 0) {
+                segment(prefix)
+                segment(match, highlighted: true)
+                segment(suffix)
+            }
+        } else {
+            segment(text)
+        }
+    }
+
+    private var matchRange: Range<String.Index>? {
+        let trimmedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedQuery.isEmpty else {
+            return nil
+        }
+
+        return text.range(of: trimmedQuery, options: [.caseInsensitive, .diacriticInsensitive])
+    }
+
+    @ViewBuilder
+    private func segment(_ value: String, highlighted: Bool = false) -> some View {
+        Text(value)
+            .font(font)
+            .foregroundStyle(foregroundStyle)
+            .strikethrough(strikethrough)
+            .padding(.horizontal, highlighted ? 2 : 0)
+            .background(highlighted ? Color.yellow.opacity(0.28) : Color.clear)
+            .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
     }
 }
 
@@ -725,6 +898,7 @@ final class PlainShellModel: ObservableObject {
     @Published private(set) var externalChangeState: ExternalChangeState = .idle
     @Published private(set) var draftResetToken = 0
     @Published private(set) var sortMode: TaskSortMode
+    @Published private(set) var activeSearchQuery = ""
     @Published private(set) var projectCounts: [TagCount] = []
     @Published private(set) var contextCounts: [TagCount] = []
 
@@ -758,6 +932,10 @@ final class PlainShellModel: ObservableObject {
 
     var archiveStatusText: String {
         "\(doneCount) archived tasks"
+    }
+
+    var hasActiveSearch: Bool {
+        !activeSearchQuery.isEmpty
     }
 
     var archiveDescription: String {
@@ -1105,6 +1283,16 @@ final class PlainShellModel: ObservableObject {
         setSortMode(sortMode.next)
     }
 
+    func setSearchQuery(_ query: String) {
+        let normalizedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        activeSearchQuery = normalizedQuery
+        refreshVisibleRows()
+    }
+
+    func clearSearch() {
+        setSearchQuery("")
+    }
+
     private func resolveInitialSourceURL() -> URL? {
         if launchArguments.contains("--ui-testing") {
             return nil
@@ -1395,9 +1583,9 @@ final class PlainShellModel: ObservableObject {
         }
 
         if selection == .done {
-            visibleRows = buildArchiveRows(from: archiveSnapshot)
+            visibleRows = applySearchFilter(to: buildArchiveRows(from: archiveSnapshot))
         } else {
-            visibleRows = buildVisibleRows(from: todoSnapshot, tasks: indexedTasks)
+            visibleRows = applySearchFilter(to: buildVisibleRows(from: todoSnapshot, tasks: indexedTasks))
         }
 
         if let selectedRowID, visibleRows.contains(where: { $0.id == selectedRowID }) {
@@ -1420,6 +1608,14 @@ final class PlainShellModel: ObservableObject {
         }
 
         return counts.keys.sorted().map { TagCount(name: $0, count: counts[$0, default: 0]) }
+    }
+
+    private func applySearchFilter(to rows: [Row]) -> [Row] {
+        guard !activeSearchQuery.isEmpty else {
+            return rows
+        }
+
+        return rows.filter { $0.rawText.localizedCaseInsensitiveContains(activeSearchQuery) }
     }
 
     private func buildVisibleRows(from snapshot: TodoFileSnapshot, tasks: [IndexedTask]) -> [Row] {

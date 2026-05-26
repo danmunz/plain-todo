@@ -178,6 +178,98 @@ final class PlainShellModelTests: XCTestCase {
         XCTAssertEqual(model.visibleRows.first(where: { $0.id == preservedIdentity })?.rawText, "gamma item")
     }
 
+    func testSearchFiltersRowsByCaseInsensitiveRawLineSubstring() throws {
+        let temporaryDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: temporaryDirectory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: temporaryDirectory) }
+
+        let todoURL = temporaryDirectory.appendingPathComponent("todo.txt")
+        try "Submit expense report @work\nReview sprint notes @home\nBook dentist appointment\n".write(to: todoURL, atomically: true, encoding: .utf8)
+
+        let model = PlainShellModel()
+        model.open(url: todoURL)
+        model.setSearchQuery("WORK")
+
+        XCTAssertEqual(model.visibleRows.map(\.rawText), ["Submit expense report @work"])
+    }
+
+    func testSearchCombinesWithSidebarSelection() throws {
+        let temporaryDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: temporaryDirectory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: temporaryDirectory) }
+
+        let todoURL = temporaryDirectory.appendingPathComponent("todo.txt")
+        try "Submit expense report @work +ops\nReview hiring plan @work\nBuy printer ink @home +ops\n".write(to: todoURL, atomically: true, encoding: .utf8)
+
+        let model = PlainShellModel()
+        model.open(url: todoURL)
+        model.selection = .context("work")
+        model.setSearchQuery("expense")
+
+        XCTAssertEqual(model.visibleRows.map(\.rawText), ["Submit expense report @work +ops"])
+    }
+
+    func testSearchPreservesSelectedRowWhenMatchRemainsVisible() throws {
+        let temporaryDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: temporaryDirectory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: temporaryDirectory) }
+
+        let todoURL = temporaryDirectory.appendingPathComponent("todo.txt")
+        try "alpha task\nbeta task @work\ngamma task @work\n".write(to: todoURL, atomically: true, encoding: .utf8)
+
+        let model = PlainShellModel()
+        model.open(url: todoURL)
+
+        let preservedIdentity = try XCTUnwrap(model.visibleRows[2].id)
+        model.selectedRowID = preservedIdentity
+        model.setSearchQuery("task")
+
+        XCTAssertEqual(model.selectedRowID, preservedIdentity)
+    }
+
+    func testSearchFallsBackToFirstVisibleRowWhenSelectionDropsOut() throws {
+        let temporaryDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: temporaryDirectory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: temporaryDirectory) }
+
+        let todoURL = temporaryDirectory.appendingPathComponent("todo.txt")
+        try "alpha task\nbeta task @work\ngamma task @work\n".write(to: todoURL, atomically: true, encoding: .utf8)
+
+        let model = PlainShellModel()
+        model.open(url: todoURL)
+
+        let droppedIdentity = try XCTUnwrap(model.visibleRows.first?.id)
+        model.selectedRowID = droppedIdentity
+        model.setSearchQuery("gamma")
+
+        XCTAssertNotEqual(model.selectedRowID, droppedIdentity)
+        XCTAssertEqual(model.visibleRows.map(\.rawText), ["gamma task @work"])
+        XCTAssertEqual(model.selectedRowID, model.visibleRows.first?.id)
+    }
+
+    func testSearchRemainsAppliedAcrossExternalReload() throws {
+        let temporaryDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: temporaryDirectory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: temporaryDirectory) }
+
+        let todoURL = temporaryDirectory.appendingPathComponent("todo.txt")
+        try "alpha work item\nbeta home item\n".write(to: todoURL, atomically: true, encoding: .utf8)
+
+        let model = PlainShellModel()
+        model.open(url: todoURL)
+        model.setSearchQuery("work")
+
+        try "gamma work item\ndelta home item\n".write(to: todoURL, atomically: true, encoding: .utf8)
+        model.handleTodoFileChangedExternally()
+
+        XCTAssertEqual(model.visibleRows.map(\.rawText), ["gamma work item"])
+    }
+
     func testDoneSelectionIgnoresActiveSortMode() throws {
         let (sortPreferences, defaults, suiteName) = makeSortPreferenceStore()
         defer { defaults.removePersistentDomain(forName: suiteName) }
