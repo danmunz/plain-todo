@@ -1323,6 +1323,16 @@ final class PlainShellModel: ObservableObject {
         }
     }
 
+    func openDeepLink(_ url: URL) {
+        loadInitialSnapshotIfNeeded()
+
+        guard let route = PlainDeepLinkRoute(url: url) else {
+            return
+        }
+
+        selection = route.selection
+    }
+
     func open(url: URL, persistSelection: Bool = true) {
         do {
             store?.stopMonitoring()

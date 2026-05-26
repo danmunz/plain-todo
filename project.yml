@@ -34,6 +34,13 @@ targets:
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_NSPrincipalClass: NSApplication
         INFOPLIST_KEY_NSHumanReadableCopyright: ''
+    info:
+      path: Sources/PlainApp/Info.plist
+      properties:
+        CFBundleURLTypes:
+          - CFBundleURLName: com.danmunz.Plain
+            CFBundleURLSchemes:
+              - plain
   PlainCoreTests:
     type: bundle.unit-test
     platform: macOS

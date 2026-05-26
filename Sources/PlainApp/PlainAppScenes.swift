@@ -26,6 +26,9 @@ private struct PlainMainWindowScene: Scene {
         WindowGroup(id: "main") {
             PlainShellView(model: model)
                 .background(MainWindowRegistrationView(controller: quickAddController))
+                .onOpenURL { url in
+                    model.openDeepLink(url)
+                }
         }
     }
 }

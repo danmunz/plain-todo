@@ -214,6 +214,30 @@ final class PlainShellModelTests: XCTestCase {
         XCTAssertTrue(model.sourceDescription.contains("todo.txt"))
     }
 
+    func testDeepLinksSelectSidebarViewsAfterInitialLoad() throws {
+        let temporaryDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: temporaryDirectory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: temporaryDirectory) }
+
+        let todoURL = temporaryDirectory.appendingPathComponent("todo.txt")
+        try "Review parser +plain\nInbox cleanup @home\n".write(to: todoURL, atomically: true, encoding: .utf8)
+
+        let model = PlainShellModel()
+        model.open(url: todoURL)
+
+        model.openDeepLink(URL(string: "plain://project/plain")!)
+        XCTAssertEqual(model.selection, .project("plain"))
+        XCTAssertEqual(model.visibleRows.map(\.rawText), ["Review parser +plain"])
+
+        model.openDeepLink(URL(string: "plain://done")!)
+        XCTAssertEqual(model.selection, .done)
+
+        model.openDeepLink(URL(string: "plain://context/home")!)
+        XCTAssertEqual(model.selection, .context("home"))
+        XCTAssertEqual(model.visibleRows.map(\.rawText), ["Inbox cleanup @home"])
+    }
+
     func testSessionRestoreStoreRoundTripsSourcePathAndSelection() {
         let (sessionRestore, defaults, suiteName) = makeSessionRestoreStore()
         defer { defaults.removePersistentDomain(forName: suiteName) }

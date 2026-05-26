@@ -18,6 +18,7 @@
 		2D8B548967108D18AF2D0D90 /* PreferencesStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEE53DE05041E2F229C85657 /* PreferencesStore.swift */; };
 		466C0C47C4DF3AB3CC276BB0 /* simple.txt in Resources */ = {isa = PBXBuildFile; fileRef = 0E07E99BD43CA029CB6BEF84 /* simple.txt */; };
 		5179D5A45AE59CDF2BA239A1 /* WriteTransaction.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7159E50492A006589AA2699B /* WriteTransaction.swift */; };
+		583B8B9D745409F8F7E3F2E0 /* DeepLinkRoute.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CE5628E209438C7082CBF9C /* DeepLinkRoute.swift */; };
 		61137BC248941C968CAD0677 /* PlainCore.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 6709428629AF9F777D14DC8F /* PlainCore.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		66284341270AD3DEC396F2A7 /* malformed.txt in Resources */ = {isa = PBXBuildFile; fileRef = 62688EA1E817DDE6AC9AF859 /* malformed.txt */; };
 		754565861B9DE94C5C607818 /* ArchiveTransaction.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12A5C8D49E9A1233D55055BA /* ArchiveTransaction.swift */; };
@@ -108,10 +109,12 @@
 		374BEC8118DDB9E142FF11EC /* TodoParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodoParserTests.swift; sourceTree = "<group>"; };
 		484F574EE539D1CC5379CBB9 /* PlainAppScenes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlainAppScenes.swift; sourceTree = "<group>"; };
 		5B46FB930146E8B673C98711 /* DatePhraseParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatePhraseParser.swift; sourceTree = "<group>"; };
+		5CE5628E209438C7082CBF9C /* DeepLinkRoute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeepLinkRoute.swift; sourceTree = "<group>"; };
 		62688EA1E817DDE6AC9AF859 /* malformed.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = malformed.txt; sourceTree = "<group>"; };
 		6709428629AF9F777D14DC8F /* PlainCore.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = PlainCore.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		7159E50492A006589AA2699B /* WriteTransaction.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WriteTransaction.swift; sourceTree = "<group>"; };
 		71FE653BE91C0C109B93D6C9 /* PlainUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlainUITests.swift; sourceTree = "<group>"; };
+		799FA40D305345E972A46620 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		7D51F145A39C103852A3747A /* sample.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = sample.txt; sourceTree = "<group>"; };
 		7ED98B2DC5394AD5F61C6E04 /* QuickAddPanelController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickAddPanelController.swift; sourceTree = "<group>"; };
 		8D8716BACF9516567A5E8E33 /* empty.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = empty.txt; sourceTree = "<group>"; };
@@ -156,6 +159,8 @@
 		2035732345AEA24E66997CAB /* PlainApp */ = {
 			isa = PBXGroup;
 			children = (
+				5CE5628E209438C7082CBF9C /* DeepLinkRoute.swift */,
+				799FA40D305345E972A46620 /* Info.plist */,
 				E58B1E68A47F8EE5DCDAC28D /* MenuBarContentView.swift */,
 				9074C8EDC17EAC36F9AF7CD9 /* PlainApp.swift */,
 				484F574EE539D1CC5379CBB9 /* PlainAppScenes.swift */,
@@ -423,6 +428,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				583B8B9D745409F8F7E3F2E0 /* DeepLinkRoute.swift in Sources */,
 				081886006D513776ACD95147 /* MenuBarContentView.swift in Sources */,
 				8D3699BD63DC4CAEC95A7B94 /* PlainApp.swift in Sources */,
 				F5D5F06AD52F322B99E97E44 /* PlainAppScenes.swift in Sources */,
@@ -669,6 +675,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				COMBINE_HIDPI_IMAGES = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Sources/PlainApp/Info.plist;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -687,6 +694,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				COMBINE_HIDPI_IMAGES = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Sources/PlainApp/Info.plist;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
 				LD_RUNPATH_SEARCH_PATHS = (
