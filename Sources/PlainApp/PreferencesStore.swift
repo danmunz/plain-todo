@@ -26,8 +26,15 @@ final class PreferencesStore: ObservableObject {
         }
     }
 
+    @Published var automaticallyAddCreationDate: Bool {
+        didSet {
+            userDefaults.set(automaticallyAddCreationDate, forKey: automaticallyAddCreationDateKey)
+        }
+    }
+
     private let userDefaults: UserDefaults
     private let archiveBehaviorKey = "PlainArchiveBehavior"
+    private let automaticallyAddCreationDateKey = "PlainAutomaticallyAddCreationDate"
 
     init(userDefaults: UserDefaults = .standard) {
         self.userDefaults = userDefaults
@@ -37,6 +44,12 @@ final class PreferencesStore: ObservableObject {
             self.archiveBehavior = archiveBehavior
         } else {
             self.archiveBehavior = .manual
+        }
+
+        if userDefaults.object(forKey: automaticallyAddCreationDateKey) == nil {
+            self.automaticallyAddCreationDate = true
+        } else {
+            self.automaticallyAddCreationDate = userDefaults.bool(forKey: automaticallyAddCreationDateKey)
         }
     }
 }
@@ -52,6 +65,8 @@ struct PreferencesView: View {
                 }
             }
             .pickerStyle(.radioGroup)
+
+            Toggle("Automatically add creation date to new tasks", isOn: $preferences.automaticallyAddCreationDate)
         }
         .padding(20)
         .frame(minWidth: 380)

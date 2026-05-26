@@ -197,7 +197,17 @@ private struct PlainShellView: View {
     }
 
     private var addTaskPreview: DatePhrasePreview? {
-        DatePhraseParser.preview(for: newTaskText)
+        guard let previewText = model.previewTextForNewTask(newTaskText),
+              let preview = DatePhraseParser.preview(for: newTaskText)
+        else {
+            return nil
+        }
+
+        return DatePhrasePreview(
+            sourcePhrase: preview.sourcePhrase,
+            dueDate: preview.dueDate,
+            transformedText: previewText
+        )
     }
 
     private var detailView: some View {
@@ -1195,7 +1205,7 @@ final class PlainShellModel: ObservableObject {
         }
 
         do {
-            let parsedText = DatePhraseParser.preview(for: rawText)?.transformedText ?? rawText
+            let parsedText = preparedNewTaskText(from: rawText)
             let transaction = try store.appendTask(rawText: parsedText)
             apply(transaction: transaction)
             selectedRowID = transaction.updatedSnapshot.lines.last?.identity
@@ -1410,6 +1420,14 @@ final class PlainShellModel: ObservableObject {
         setSortMode(sortMode.next)
     }
 
+    func previewTextForNewTask(_ rawText: String) -> String? {
+        guard DatePhraseParser.preview(for: rawText) != nil else {
+            return nil
+        }
+
+        return preparedNewTaskText(from: rawText)
+    }
+
     func setSearchQuery(_ query: String) {
         let normalizedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
         activeSearchQuery = normalizedQuery
@@ -1522,6 +1540,50 @@ final class PlainShellModel: ObservableObject {
         contextCounts = buildTagCounts(from: incompleteTasks, keyPath: \.task.contexts)
         sourceDescription = sourceLabel(for: sourceURL, snapshot: todoSnapshot)
         refreshVisibleRows(tasks: indexedTasks)
+    }
+
+    private func preparedNewTaskText(from rawText: String, referenceDate: Date = Date()) -> String {
+        let transformedDueText = DatePhraseParser.preview(for: rawText, referenceDate: referenceDate)?.transformedText ?? rawText
+        guard preferences.automaticallyAddCreationDate else {
+            return transformedDueText
+        }
+
+        return applyingCreationDateIfNeeded(to: transformedDueText, referenceDate: referenceDate)
+    }
+
+    private func applyingCreationDateIfNeeded(to rawText: String, referenceDate: Date) -> String {
+        guard !rawText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return rawText
+        }
+
+        let parsedLine = TodoParser.parseLine(rawText, lineNumber: 0, originalLineEnding: nil)
+        guard let task = parsedLine.task,
+              !task.isCompleted,
+              task.creationDate == nil
+        else {
+            return rawText
+        }
+
+        let calendar = Calendar(identifier: .gregorian)
+        let components = calendar.dateComponents([.year, .month, .day], from: referenceDate)
+        guard let year = components.year,
+              let month = components.month,
+              let day = components.day
+        else {
+            return rawText
+        }
+
+        let updatedTask = TodoTask(
+            isCompleted: task.isCompleted,
+            priority: task.priority,
+            completionDate: task.completionDate,
+            creationDate: TodoDate(year: year, month: month, day: day),
+            body: task.body,
+            projects: task.projects,
+            contexts: task.contexts,
+            metadata: task.metadata
+        )
+        return updatedTask.renderedRawText()
     }
 
     private func apply(transaction: WriteTransaction) {

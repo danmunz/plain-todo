@@ -56,11 +56,51 @@ final class PlainShellModelTests: XCTestCase {
         let model = PlainShellModel()
         model.open(url: fileURL)
 
-        let preview = try XCTUnwrap(DatePhraseParser.preview(for: "Review PR tomorrow @work +shipping"))
+        let previewText = try XCTUnwrap(model.previewTextForNewTask("Review PR tomorrow @work +shipping"))
         model.addTask(rawText: "Review PR tomorrow @work +shipping", undoManager: nil)
 
-        XCTAssertEqual(model.visibleRows.last?.rawText, preview.transformedText)
-        XCTAssertTrue(try String(contentsOf: fileURL, encoding: .utf8).contains(preview.transformedText))
+        XCTAssertEqual(model.visibleRows.last?.rawText, previewText)
+        XCTAssertTrue(try String(contentsOf: fileURL, encoding: .utf8).contains(previewText))
+    }
+
+    func testAddTaskAddsCreationDateByDefault() throws {
+        let temporaryDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: temporaryDirectory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: temporaryDirectory) }
+
+        let fileURL = temporaryDirectory.appendingPathComponent("todo.txt")
+        try "Call accountant @phone +taxes\n".write(to: fileURL, atomically: true, encoding: .utf8)
+
+        let model = PlainShellModel()
+        model.open(url: fileURL)
+        model.addTask(rawText: "Review parser bootstrap +plain @work", undoManager: nil)
+
+        let calendar = Calendar(identifier: .gregorian)
+        let components = calendar.dateComponents([.year, .month, .day], from: Date())
+        let today = String(format: "%04d-%02d-%02d", components.year ?? 0, components.month ?? 0, components.day ?? 0)
+
+        XCTAssertEqual(model.visibleRows.last?.rawText, "\(today) Review parser bootstrap +plain @work")
+    }
+
+    func testAddTaskCanSkipCreationDateWhenPreferenceIsDisabled() throws {
+        let (preferences, defaults, suiteName) = makePreferencesStore()
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        preferences.automaticallyAddCreationDate = false
+
+        let temporaryDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: temporaryDirectory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: temporaryDirectory) }
+
+        let fileURL = temporaryDirectory.appendingPathComponent("todo.txt")
+        try "Call accountant @phone +taxes\n".write(to: fileURL, atomically: true, encoding: .utf8)
+
+        let model = PlainShellModel(preferences: preferences)
+        model.open(url: fileURL)
+        model.addTask(rawText: "Review parser bootstrap +plain @work", undoManager: nil)
+
+        XCTAssertEqual(model.visibleRows.last?.rawText, "Review parser bootstrap +plain @work")
     }
 
     func testMoveSelectionTracksVisibleRows() throws {
@@ -97,6 +137,20 @@ final class PlainShellModelTests: XCTestCase {
 
         let secondStore = PreferencesStore(userDefaults: defaults)
         XCTAssertEqual(secondStore.archiveBehavior, .automatic)
+    }
+
+    func testCreationDatePreferencePersistsAcrossStoreInstances() {
+        let suiteName = "CreationDatePreferenceTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let firstStore = PreferencesStore(userDefaults: defaults)
+        XCTAssertTrue(firstStore.automaticallyAddCreationDate)
+        firstStore.automaticallyAddCreationDate = false
+
+        let secondStore = PreferencesStore(userDefaults: defaults)
+        XCTAssertFalse(secondStore.automaticallyAddCreationDate)
     }
 
     func testSortModesReorderInboxRowsWithoutMutatingFileOrder() throws {

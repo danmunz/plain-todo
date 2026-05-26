@@ -2,7 +2,7 @@
 
 ## Status
 
-This repo is no longer docs-only. It now has a SwiftPM bootstrap, an XcodeGen-backed `Plain.xcodeproj`, `PlainCore`, a SwiftUI `PlainApp` shell, parser and serializer coverage, coordinated read and write support, inline raw-line editing, keyboard row selection, UndoManager-backed destructive edits, keyboard and drag reorder, coordinated archive-to-`done.txt`, a read-only Done view, archive-behavior preferences, persisted per-view sort modes, grouped sorted task views, a transient Cmd+F search overlay with live filtering, natural-language due-date parsing and preview in the add bar, explicit external-change conflict handling with reload and keep-mine flows, and working app, unit, and UI smoke tests. Widgets, app extensions, richer diff tooling, and secondary surfaces remain open. The plan below remains the dependency order for the remaining work.
+This repo is no longer docs-only. It now has a SwiftPM bootstrap, an XcodeGen-backed `Plain.xcodeproj`, `PlainCore`, a SwiftUI `PlainApp` shell, parser and serializer coverage, coordinated read and write support, inline raw-line editing, keyboard row selection, UndoManager-backed destructive edits, keyboard and drag reorder, coordinated archive-to-`done.txt`, a read-only Done view, archive-behavior and creation-date preferences, persisted per-view sort modes, grouped sorted task views, a transient Cmd+F search overlay with live filtering, natural-language due-date parsing and preview in the add bar, explicit external-change conflict handling with reload and keep-mine flows, and working app, unit, and UI smoke tests. Widgets, app extensions, richer diff tooling, and secondary surfaces remain open. The plan below remains the dependency order for the remaining work.
 
 ## Recommended Stack
 
@@ -186,8 +186,8 @@ Current progress note:
 - keyboard selection and UndoManager-backed undo or redo are implemented for the current shell
 - completed tasks can now be archived into `done.txt` through a coordinated dual-file transaction, and the Done sidebar view is backed by the archive file
 - external todo and done file changes are now observed explicitly, with non-modal reload and keep-mine conflict handling that avoids clobbering active drafts
-- reorder is implemented in the inbox via keyboard, menu, and drag actions, each task view remembers its own display sort mode in app state without mutating file order, sorted views render lightweight grouping headers, Cmd+F presents a transient live-search overlay that composes with sidebar filters, and the add bar now previews and applies supported due-date phrases
-- richer diff tooling, creation-date preferences, and broader regression coverage for end-to-end keyboard editing remain open
+- reorder is implemented in the inbox via keyboard, menu, and drag actions, each task view remembers its own display sort mode in app state without mutating file order, sorted views render lightweight grouping headers, Cmd+F presents a transient live-search overlay that composes with sidebar filters, and the add bar previews and applies supported due-date phrases with automatic creation dates controlled by preferences
+- richer diff tooling, show-completed preferences, and broader regression coverage for end-to-end keyboard editing remain open
 
 ### Phase 4. Advanced File Workflows
 

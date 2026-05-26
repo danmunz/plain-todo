@@ -104,8 +104,8 @@ public struct TodoTask: Equatable, Sendable {
     }
 }
 
-extension TodoTask {
-    func renderedRawText() -> String {
+public extension TodoTask {
+    public func renderedRawText() -> String {
         var tokens: [String] = []
 
         if isCompleted {
