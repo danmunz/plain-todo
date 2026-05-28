@@ -77,6 +77,20 @@
                ReferencedContainer = "container:Plain.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "EB8AE905B75A660B03D6EF4D"
+               BuildableName = "PlainWidgetExtension.appex"
+               BlueprintName = "PlainWidgetExtension"
+               ReferencedContainer = "container:Plain.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
       </BuildActionEntries>
    </BuildAction>
    <TestAction

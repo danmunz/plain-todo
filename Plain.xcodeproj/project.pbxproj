@@ -27,28 +27,47 @@
 		7CE617DD1B3F0488924153CF /* FixtureLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = F19F2405E02739CB6B515BF5 /* FixtureLoader.swift */; };
 		7F3529AAE1FA946F08EA6B1B /* TodoSnapshotLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 222CF9A9474B5CA29171C450 /* TodoSnapshotLoader.swift */; };
 		828636ABACEA537EA3AFEB6D /* CoordinatedTodoStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9763AECAAD6FEB1933CEB2C /* CoordinatedTodoStore.swift */; };
+		86A92E2FE482FF9651161B16 /* PlainWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B18B8B791E6CB58F9E64430 /* PlainWidgetBundle.swift */; };
+		8A3BC80CCAB8A2EF61785299 /* PlainWidgetSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 333D1A800A033D0570B63BA1 /* PlainWidgetSnapshot.swift */; };
 		8D3699BD63DC4CAEC95A7B94 /* PlainApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9074C8EDC17EAC36F9AF7CD9 /* PlainApp.swift */; };
 		98DECBEE9FB063D2FBF142A6 /* PlainShellModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2AB15A3803A8B5693E9C7369 /* PlainShellModelTests.swift */; };
 		A105861484DC2ACD027C5415 /* DatePhraseParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CA591985F337DE78E0AFCF2 /* DatePhraseParserTests.swift */; };
 		AAC3DCF3D717401BE32BFE28 /* SortPreferenceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAC46F0B2392BCE31F3FF94F /* SortPreferenceStore.swift */; };
 		AAE302EE87317B5D9C755FEF /* TodoParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 365E9D42C7E0863B5E2809A5 /* TodoParser.swift */; };
 		AC00987BB4984A61CB51C43E /* DatePhraseParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B46FB930146E8B673C98711 /* DatePhraseParser.swift */; };
+		B0B58BDCFA49C76BE3015912 /* PlainWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = A080FFE7FD812F26D033600E /* PlainWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		B328F742CC049904B1550A25 /* sample.txt in Resources */ = {isa = PBXBuildFile; fileRef = 7D51F145A39C103852A3747A /* sample.txt */; };
 		BED3890ADC573A574947D28F /* TodoSerializer.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0E190EF4603D5AD3528E1A7 /* TodoSerializer.swift */; };
 		CF623C887725732752705241 /* SessionRestoreStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D24B5F77A61C59156CA864A4 /* SessionRestoreStore.swift */; };
 		CFE2790ED0C792C6EB3E4D0A /* CoordinatedTodoStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 977C67E1763A75558845983E /* CoordinatedTodoStoreTests.swift */; };
 		D34417B3AF823E32AC16B81A /* QuickAddPanelController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7ED98B2DC5394AD5F61C6E04 /* QuickAddPanelController.swift */; };
+		E0C841D4C17598ED93261B83 /* PlainWidgetSnapshotStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A650051833ACF5C47D0E8A89 /* PlainWidgetSnapshotStoreTests.swift */; };
 		E458B0654FDD930279AD7D68 /* roundtrip.txt in Resources */ = {isa = PBXBuildFile; fileRef = D08BC1DF22DCD8D99139809B /* roundtrip.txt */; };
 		F5D5F06AD52F322B99E97E44 /* PlainAppScenes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 484F574EE539D1CC5379CBB9 /* PlainAppScenes.swift */; };
+		F9041F187C458EF033491A06 /* PlainCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6709428629AF9F777D14DC8F /* PlainCore.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		3A36E8F33E6CFDCF1290657F /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 1CE545037161400820E47F68 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = E9E74DA6CDE80BA8A909907F;
+			remoteInfo = PlainCore;
+		};
 		569D749065C02AAA5062AA4C /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 1CE545037161400820E47F68 /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = E9E74DA6CDE80BA8A909907F;
 			remoteInfo = PlainCore;
+		};
+		70E1AB447D65232D010E43E0 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 1CE545037161400820E47F68 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = EB8AE905B75A660B03D6EF4D;
+			remoteInfo = PlainWidgetExtension;
 		};
 		9F406D24DACDE1C6B93473C6 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -85,6 +104,17 @@
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		9510CF21DDEC1F7A770E8419 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				B0B58BDCFA49C76BE3015912 /* PlainWidgetExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		F558CFA57494651550DC36A3 /* Embed Frameworks */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
@@ -102,11 +132,15 @@
 		0CA591985F337DE78E0AFCF2 /* DatePhraseParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatePhraseParserTests.swift; sourceTree = "<group>"; };
 		0E07E99BD43CA029CB6BEF84 /* simple.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = simple.txt; sourceTree = "<group>"; };
 		12A5C8D49E9A1233D55055BA /* ArchiveTransaction.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArchiveTransaction.swift; sourceTree = "<group>"; };
+		162B13160548A28AE70793E2 /* PlainWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = PlainWidgetExtension.entitlements; sourceTree = "<group>"; };
 		222CF9A9474B5CA29171C450 /* TodoSnapshotLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodoSnapshotLoader.swift; sourceTree = "<group>"; };
 		2562428BF4C9E1273C67F909 /* PlainCoreTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PlainCoreTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		2AB15A3803A8B5693E9C7369 /* PlainShellModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlainShellModelTests.swift; sourceTree = "<group>"; };
+		2B18B8B791E6CB58F9E64430 /* PlainWidgetBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlainWidgetBundle.swift; sourceTree = "<group>"; };
+		333D1A800A033D0570B63BA1 /* PlainWidgetSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlainWidgetSnapshot.swift; sourceTree = "<group>"; };
 		365E9D42C7E0863B5E2809A5 /* TodoParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodoParser.swift; sourceTree = "<group>"; };
 		374BEC8118DDB9E142FF11EC /* TodoParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodoParserTests.swift; sourceTree = "<group>"; };
+		42B3C25E91072D3B93EBE196 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		484F574EE539D1CC5379CBB9 /* PlainAppScenes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlainAppScenes.swift; sourceTree = "<group>"; };
 		5B46FB930146E8B673C98711 /* DatePhraseParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatePhraseParser.swift; sourceTree = "<group>"; };
 		5CE5628E209438C7082CBF9C /* DeepLinkRoute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeepLinkRoute.swift; sourceTree = "<group>"; };
@@ -121,6 +155,8 @@
 		9074C8EDC17EAC36F9AF7CD9 /* PlainApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlainApp.swift; sourceTree = "<group>"; };
 		977C67E1763A75558845983E /* CoordinatedTodoStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoordinatedTodoStoreTests.swift; sourceTree = "<group>"; };
 		98CFF71F3274CEB6F4773117 /* TodoModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodoModels.swift; sourceTree = "<group>"; };
+		A080FFE7FD812F26D033600E /* PlainWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = PlainWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		A650051833ACF5C47D0E8A89 /* PlainWidgetSnapshotStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlainWidgetSnapshotStoreTests.swift; sourceTree = "<group>"; };
 		AAC46F0B2392BCE31F3FF94F /* SortPreferenceStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SortPreferenceStore.swift; sourceTree = "<group>"; };
 		B0E190EF4603D5AD3528E1A7 /* TodoSerializer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodoSerializer.swift; sourceTree = "<group>"; };
 		BEE53DE05041E2F229C85657 /* PreferencesStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreferencesStore.swift; sourceTree = "<group>"; };
@@ -131,12 +167,21 @@
 		E9763AECAAD6FEB1933CEB2C /* CoordinatedTodoStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoordinatedTodoStore.swift; sourceTree = "<group>"; };
 		EBF26B70F06E4FCF632C3FA2 /* PlainAppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PlainAppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		EC82247FB5E4D58AC83C0328 /* TaskMutation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskMutation.swift; sourceTree = "<group>"; };
+		EFBBEFB8C4700AAF54DD4C8D /* PlainApp.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = PlainApp.entitlements; sourceTree = "<group>"; };
 		F19F2405E02739CB6B515BF5 /* FixtureLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FixtureLoader.swift; sourceTree = "<group>"; };
 		FA805540AC69F08ED8151DA9 /* PlainApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PlainApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		FC678EA1B4985009EF51DAC2 /* PlainUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PlainUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		3D2B2CE3ECFE28EEAA38BDA8 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F9041F187C458EF033491A06 /* PlainCore.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		7793F03A8FB1D1B2E7A9F823 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -162,6 +207,7 @@
 				5CE5628E209438C7082CBF9C /* DeepLinkRoute.swift */,
 				799FA40D305345E972A46620 /* Info.plist */,
 				E58B1E68A47F8EE5DCDAC28D /* MenuBarContentView.swift */,
+				EFBBEFB8C4700AAF54DD4C8D /* PlainApp.entitlements */,
 				9074C8EDC17EAC36F9AF7CD9 /* PlainApp.swift */,
 				484F574EE539D1CC5379CBB9 /* PlainAppScenes.swift */,
 				BEE53DE05041E2F229C85657 /* PreferencesStore.swift */,
@@ -191,6 +237,7 @@
 				977C67E1763A75558845983E /* CoordinatedTodoStoreTests.swift */,
 				0CA591985F337DE78E0AFCF2 /* DatePhraseParserTests.swift */,
 				F19F2405E02739CB6B515BF5 /* FixtureLoader.swift */,
+				A650051833ACF5C47D0E8A89 /* PlainWidgetSnapshotStoreTests.swift */,
 				C1D921A0086C0CD0191AED79 /* TaskMutationTests.swift */,
 				374BEC8118DDB9E142FF11EC /* TodoParserTests.swift */,
 				3A22546FC803DEA8E8EEA1C0 /* Fixtures */,
@@ -216,6 +263,7 @@
 				F041CC2FD467696832FB61D8 /* PlainCore */,
 				7AFC1A08D83AC2883C2F1F30 /* PlainCoreTests */,
 				A11FB5AF7F4784A845658551 /* PlainUITests */,
+				FC60F6A5A0138D255B0340E9 /* PlainWidgetExtension */,
 				C35D05B9FC67101C9732CE2A /* Products */,
 			);
 			sourceTree = "<group>";
@@ -236,6 +284,7 @@
 				6709428629AF9F777D14DC8F /* PlainCore.framework */,
 				2562428BF4C9E1273C67F909 /* PlainCoreTests.xctest */,
 				FC678EA1B4985009EF51DAC2 /* PlainUITests.xctest */,
+				A080FFE7FD812F26D033600E /* PlainWidgetExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -255,6 +304,7 @@
 				12A5C8D49E9A1233D55055BA /* ArchiveTransaction.swift */,
 				E9763AECAAD6FEB1933CEB2C /* CoordinatedTodoStore.swift */,
 				5B46FB930146E8B673C98711 /* DatePhraseParser.swift */,
+				333D1A800A033D0570B63BA1 /* PlainWidgetSnapshot.swift */,
 				EC82247FB5E4D58AC83C0328 /* TaskMutation.swift */,
 				98CFF71F3274CEB6F4773117 /* TodoModels.swift */,
 				365E9D42C7E0863B5E2809A5 /* TodoParser.swift */,
@@ -264,6 +314,17 @@
 			);
 			name = PlainCore;
 			path = Sources/PlainCore;
+			sourceTree = "<group>";
+		};
+		FC60F6A5A0138D255B0340E9 /* PlainWidgetExtension */ = {
+			isa = PBXGroup;
+			children = (
+				42B3C25E91072D3B93EBE196 /* Info.plist */,
+				2B18B8B791E6CB58F9E64430 /* PlainWidgetBundle.swift */,
+				162B13160548A28AE70793E2 /* PlainWidgetExtension.entitlements */,
+			);
+			name = PlainWidgetExtension;
+			path = Sources/PlainWidgetExtension;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -276,12 +337,14 @@
 				2FFAEF249B652F4D30851E33 /* Sources */,
 				102897DE6AC9933D5F8B2AE8 /* Resources */,
 				7793F03A8FB1D1B2E7A9F823 /* Frameworks */,
+				9510CF21DDEC1F7A770E8419 /* Embed Foundation Extensions */,
 				3029EC280632544513E9BDF8 /* Embed Frameworks */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 				86AB3FAD7A3C3D5A44DBD851 /* PBXTargetDependency */,
+				252597B73E97A91822386DEA /* PBXTargetDependency */,
 			);
 			name = PlainApp;
 			packageProductDependencies = (
@@ -364,6 +427,25 @@
 			productReference = 6709428629AF9F777D14DC8F /* PlainCore.framework */;
 			productType = "com.apple.product-type.framework";
 		};
+		EB8AE905B75A660B03D6EF4D /* PlainWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F3F6A00A05D398A7C94C692D /* Build configuration list for PBXNativeTarget "PlainWidgetExtension" */;
+			buildPhases = (
+				5F358165F3F23182AEFE3E37 /* Sources */,
+				3D2B2CE3ECFE28EEAA38BDA8 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				BCE15563D91DDF7E6C62566F /* PBXTargetDependency */,
+			);
+			name = PlainWidgetExtension;
+			packageProductDependencies = (
+			);
+			productName = PlainWidgetExtension;
+			productReference = A080FFE7FD812F26D033600E /* PlainWidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -397,6 +479,7 @@
 				E9E74DA6CDE80BA8A909907F /* PlainCore */,
 				5A0E5D60E2D9D323DD4B00A4 /* PlainCoreTests */,
 				7E2C5837224225F691EC81FA /* PlainUITests */,
+				EB8AE905B75A660B03D6EF4D /* PlainWidgetExtension */,
 			);
 		};
 /* End PBXProject section */
@@ -447,6 +530,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		5F358165F3F23182AEFE3E37 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				86A92E2FE482FF9651161B16 /* PlainWidgetBundle.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		812EE5508D39578671E0AEC5 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -454,6 +545,7 @@
 				CFE2790ED0C792C6EB3E4D0A /* CoordinatedTodoStoreTests.swift in Sources */,
 				A105861484DC2ACD027C5415 /* DatePhraseParserTests.swift in Sources */,
 				7CE617DD1B3F0488924153CF /* FixtureLoader.swift in Sources */,
+				E0C841D4C17598ED93261B83 /* PlainWidgetSnapshotStoreTests.swift in Sources */,
 				7C58F584336AE27FA729D700 /* TaskMutationTests.swift in Sources */,
 				79BBADDE670C8446196AC5DE /* TodoParserTests.swift in Sources */,
 			);
@@ -466,6 +558,7 @@
 				754565861B9DE94C5C607818 /* ArchiveTransaction.swift in Sources */,
 				828636ABACEA537EA3AFEB6D /* CoordinatedTodoStore.swift in Sources */,
 				AC00987BB4984A61CB51C43E /* DatePhraseParser.swift in Sources */,
+				8A3BC80CCAB8A2EF61785299 /* PlainWidgetSnapshot.swift in Sources */,
 				06E727DAE7334DC7A93C5098 /* TaskMutation.swift in Sources */,
 				1E84D99EDEC87FE63978DEB9 /* TodoModels.swift in Sources */,
 				AAE302EE87317B5D9C755FEF /* TodoParser.swift in Sources */,
@@ -486,6 +579,11 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		252597B73E97A91822386DEA /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = EB8AE905B75A660B03D6EF4D /* PlainWidgetExtension */;
+			targetProxy = 70E1AB447D65232D010E43E0 /* PBXContainerItemProxy */;
+		};
 		55E26A02370E7655A24A868A /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = E9E74DA6CDE80BA8A909907F /* PlainCore */;
@@ -506,9 +604,31 @@
 			target = E9E74DA6CDE80BA8A909907F /* PlainCore */;
 			targetProxy = EB986EA3288D9003AC7CE125 /* PBXContainerItemProxy */;
 		};
+		BCE15563D91DDF7E6C62566F /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = E9E74DA6CDE80BA8A909907F /* PlainCore */;
+			targetProxy = 3A36E8F33E6CFDCF1290657F /* PBXContainerItemProxy */;
+		};
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
+		24E4D4917B9DA9B7F0BAA041 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Sources/PlainWidgetExtension/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.danmunz.Plain.WidgetExtension;
+				PRODUCT_NAME = PlainWidgetExtension;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
 		4D17D098164DB8F40580AB0D /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -731,6 +851,23 @@
 			};
 			name = Release;
 		};
+		D29A6C86E9160460202A4982 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Sources/PlainWidgetExtension/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.danmunz.Plain.WidgetExtension;
+				PRODUCT_NAME = PlainWidgetExtension;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
 		D70C7AD4DFB65A553AF8B9B3 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -860,6 +997,15 @@
 			buildConfigurations = (
 				848D13A293E428467D08E6B7 /* Debug */,
 				CF49842437FB52D9D30BB372 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		F3F6A00A05D398A7C94C692D /* Build configuration list for PBXNativeTarget "PlainWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D29A6C86E9160460202A4982 /* Debug */,
+				24E4D4917B9DA9B7F0BAA041 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;

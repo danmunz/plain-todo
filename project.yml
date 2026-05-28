@@ -27,6 +27,8 @@ targets:
       - Sources/PlainApp/Resources
     dependencies:
       - target: PlainCore
+      - target: PlainWidgetExtension
+        embed: true
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.danmunz.Plain
@@ -41,6 +43,20 @@ targets:
           - CFBundleURLName: com.danmunz.Plain
             CFBundleURLSchemes:
               - plain
+  PlainWidgetExtension:
+    type: app-extension
+    platform: macOS
+    sources:
+      - Sources/PlainWidgetExtension
+    dependencies:
+      - target: PlainCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.danmunz.Plain.WidgetExtension
+        PRODUCT_NAME: PlainWidgetExtension
+        GENERATE_INFOPLIST_FILE: YES
+    info:
+      path: Sources/PlainWidgetExtension/Info.plist
   PlainCoreTests:
     type: bundle.unit-test
     platform: macOS
@@ -85,6 +101,7 @@ schemes:
     build:
       targets:
         PlainApp: all
+        PlainWidgetExtension: all
         PlainCore: all
         PlainCoreTests: [test]
         PlainAppTests: [test]

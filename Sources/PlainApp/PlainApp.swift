@@ -2,6 +2,9 @@ import Combine
 import PlainCore
 import SwiftUI
 import UniformTypeIdentifiers
+#if canImport(WidgetKit)
+import WidgetKit
+#endif
 
 private enum FocusField: Hashable {
     case newTask
@@ -1232,6 +1235,7 @@ final class PlainShellModel: ObservableObject {
     private var draftState: DraftState = .none
     private var shouldRestoreSessionSelectionOnNextLoad = false
     private var showCompletedTasks = true
+    private let widgetSnapshotDefaults: UserDefaults?
 
     var isEditable: Bool {
         isPersistedSourceEditable
@@ -1294,13 +1298,15 @@ final class PlainShellModel: ObservableObject {
         sortPreferences: SortPreferenceStore = SortPreferenceStore(),
         sessionRestore: SessionRestoreStore = SessionRestoreStore(),
         launchArguments: [String] = Array(CommandLine.arguments.dropFirst()),
-        isUITesting: Bool = ProcessInfo.processInfo.arguments.contains("--ui-testing")
+        isUITesting: Bool = ProcessInfo.processInfo.arguments.contains("--ui-testing"),
+        widgetSnapshotDefaults: UserDefaults? = UserDefaults(suiteName: PlainWidgetConfig.appGroupID)
     ) {
         self.preferences = preferences
         self.sortPreferences = sortPreferences
         self.sessionRestore = sessionRestore
         self.launchArguments = launchArguments
         self.isUITesting = isUITesting
+        self.widgetSnapshotDefaults = widgetSnapshotDefaults
         self.showCompletedTasks = preferences.showCompletedTasks
         self.sortMode = sortPreferences.sortMode(for: .inbox)
 
@@ -1404,6 +1410,8 @@ final class PlainShellModel: ObservableObject {
         selectedRowID = nil
         isScratchPadPresented = false
         presentedConflictDiff = nil
+        PlainWidgetSnapshotStore.clear(defaults: widgetSnapshotDefaults)
+        reloadWidgetTimeline()
     }
 
     func updateDraftState(newTaskText: String, editingRowID: LineIdentity?, editingRawText: String) {
@@ -2261,6 +2269,50 @@ final class PlainShellModel: ObservableObject {
         } else {
             self.selectedRowID = visibleRows.first?.id
         }
+
+        publishWidgetSnapshot()
+    }
+
+    private func publishWidgetSnapshot() {
+        let snapshot = PlainWidgetSnapshot(
+            generatedAt: Date(),
+            sourceDescription: sourceDescription,
+            selectionTitle: selection.widgetTitle,
+            deepLinkURL: deepLinkURLString(for: selection),
+            inboxCount: inboxCount,
+            todayCount: todayCount,
+            overdueCount: overdueCount,
+            doneCount: doneCount,
+            previewTasks: Array(visibleRows.prefix(3).map(\.rawText))
+        )
+
+        PlainWidgetSnapshotStore.save(snapshot, defaults: widgetSnapshotDefaults)
+        reloadWidgetTimeline()
+    }
+
+    private func deepLinkURLString(for selection: SidebarSelection) -> String {
+        switch selection {
+        case .inbox:
+            return "plain://inbox"
+        case .today:
+            return "plain://today"
+        case .overdue:
+            return "plain://overdue"
+        case .done:
+            return "plain://done"
+        case let .project(project):
+            let encodedProject = project.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? project
+            return "plain://project/\(encodedProject)"
+        case let .context(context):
+            let encodedContext = context.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? context
+            return "plain://context/\(encodedContext)"
+        }
+    }
+
+    private func reloadWidgetTimeline() {
+        #if canImport(WidgetKit)
+        WidgetCenter.shared.reloadTimelines(ofKind: PlainWidgetConfig.widgetKind)
+        #endif
     }
 
     private func buildTagCounts(
@@ -2538,6 +2590,25 @@ final class PlainShellModel: ObservableObject {
     private func sourceLabel(for url: URL, snapshot: TodoFileSnapshot) -> String {
         let newlineNote = snapshot.containsMixedLineEndings ? "mixed newlines" : snapshot.preferredLineEnding.rawValue.debugDescription
         return "Read-only bootstrap shell · \(url.lastPathComponent) · \(inboxCount) open · \(doneCount) done · \(newlineNote)"
+    }
+}
+
+private extension SidebarSelection {
+    var widgetTitle: String {
+        switch self {
+        case .inbox:
+            return "Inbox"
+        case .today:
+            return "Today"
+        case .overdue:
+            return "Overdue"
+        case .done:
+            return "Done"
+        case let .project(project):
+            return "+\(project)"
+        case let .context(context):
+            return "@\(context)"
+        }
     }
 }
 
