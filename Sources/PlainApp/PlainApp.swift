@@ -2274,38 +2274,34 @@ final class PlainShellModel: ObservableObject {
     }
 
     private func publishWidgetSnapshot() {
-        let snapshot = PlainWidgetSnapshot(
-            generatedAt: Date(),
+        let snapshot = PlainWidgetSnapshotFactory.make(
             sourceDescription: sourceDescription,
-            selectionTitle: selection.widgetTitle,
-            deepLinkURL: deepLinkURLString(for: selection),
+            selection: widgetSelection(for: selection),
             inboxCount: inboxCount,
             todayCount: todayCount,
             overdueCount: overdueCount,
             doneCount: doneCount,
-            previewTasks: Array(visibleRows.prefix(3).map(\.rawText))
+            previewTasks: visibleRows.map(\.rawText)
         )
 
         PlainWidgetSnapshotStore.save(snapshot, defaults: widgetSnapshotDefaults)
         reloadWidgetTimeline()
     }
 
-    private func deepLinkURLString(for selection: SidebarSelection) -> String {
+    private func widgetSelection(for selection: SidebarSelection) -> PlainWidgetSelection {
         switch selection {
         case .inbox:
-            return "plain://inbox"
+            return .inbox
         case .today:
-            return "plain://today"
+            return .today
         case .overdue:
-            return "plain://overdue"
+            return .overdue
         case .done:
-            return "plain://done"
+            return .done
         case let .project(project):
-            let encodedProject = project.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? project
-            return "plain://project/\(encodedProject)"
+            return .project(project)
         case let .context(context):
-            let encodedContext = context.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? context
-            return "plain://context/\(encodedContext)"
+            return .context(context)
         }
     }
 
@@ -2590,25 +2586,6 @@ final class PlainShellModel: ObservableObject {
     private func sourceLabel(for url: URL, snapshot: TodoFileSnapshot) -> String {
         let newlineNote = snapshot.containsMixedLineEndings ? "mixed newlines" : snapshot.preferredLineEnding.rawValue.debugDescription
         return "Read-only bootstrap shell · \(url.lastPathComponent) · \(inboxCount) open · \(doneCount) done · \(newlineNote)"
-    }
-}
-
-private extension SidebarSelection {
-    var widgetTitle: String {
-        switch self {
-        case .inbox:
-            return "Inbox"
-        case .today:
-            return "Today"
-        case .overdue:
-            return "Overdue"
-        case .done:
-            return "Done"
-        case let .project(project):
-            return "+\(project)"
-        case let .context(context):
-            return "@\(context)"
-        }
     }
 }
 

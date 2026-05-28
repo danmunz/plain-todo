@@ -26,6 +26,7 @@ private struct PlainWidgetProvider: TimelineProvider {
 }
 
 private struct PlainWidgetEntryView: View {
+    @Environment(\.widgetFamily) private var family
     let entry: PlainWidgetEntry
 
     var body: some View {
@@ -41,6 +42,9 @@ private struct PlainWidgetEntryView: View {
                 countChip(label: "Inbox", value: entry.snapshot.inboxCount)
                 countChip(label: "Today", value: entry.snapshot.todayCount)
                 countChip(label: "Overdue", value: entry.snapshot.overdueCount)
+                if family == .systemMedium {
+                    countChip(label: "Done", value: entry.snapshot.doneCount)
+                }
             }
 
             if entry.snapshot.previewTasks.isEmpty {
@@ -53,6 +57,12 @@ private struct PlainWidgetEntryView: View {
                         .font(.footnote)
                         .lineLimit(1)
                 }
+            }
+
+            if family == .systemMedium {
+                Text(entry.snapshot.generatedAt, style: .relative)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
             }
 
             Spacer(minLength: 0)
@@ -79,7 +89,7 @@ struct PlainOverviewWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: PlainWidgetProvider()) { entry in
             PlainWidgetEntryView(entry: entry)
-                .widgetURL(URL(string: entry.snapshot.deepLinkURL))
+                .widgetURL(URL(string: entry.snapshot.deepLinkURL) ?? URL(string: "plain://inbox"))
         }
         .configurationDisplayName("Plain Overview")
         .description("See Inbox, Today, and Overdue counts at a glance.")

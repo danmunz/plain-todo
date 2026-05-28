@@ -52,6 +52,86 @@ public struct PlainWidgetSnapshot: Codable, Equatable, Sendable {
     )
 }
 
+public enum PlainWidgetSelection: Equatable, Sendable {
+    case inbox
+    case today
+    case overdue
+    case done
+    case project(String)
+    case context(String)
+
+    public var title: String {
+        switch self {
+        case .inbox:
+            return "Inbox"
+        case .today:
+            return "Today"
+        case .overdue:
+            return "Overdue"
+        case .done:
+            return "Done"
+        case let .project(project):
+            return "+\(project)"
+        case let .context(context):
+            return "@\(context)"
+        }
+    }
+
+    public var deepLinkURLString: String {
+        switch self {
+        case .inbox:
+            return "plain://inbox"
+        case .today:
+            return "plain://today"
+        case .overdue:
+            return "plain://overdue"
+        case .done:
+            return "plain://done"
+        case let .project(project):
+            return "plain://project/\(Self.encodePathSegment(project))"
+        case let .context(context):
+            return "plain://context/\(Self.encodePathSegment(context))"
+        }
+    }
+
+    private static func encodePathSegment(_ value: String) -> String {
+        value.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? value
+    }
+}
+
+public enum PlainWidgetSnapshotFactory {
+    public static func make(
+        generatedAt: Date = Date(),
+        sourceDescription: String,
+        selection: PlainWidgetSelection,
+        inboxCount: Int,
+        todayCount: Int,
+        overdueCount: Int,
+        doneCount: Int,
+        previewTasks: [String]
+    ) -> PlainWidgetSnapshot {
+        PlainWidgetSnapshot(
+            generatedAt: generatedAt,
+            sourceDescription: sourceDescription,
+            selectionTitle: selection.title,
+            deepLinkURL: selection.deepLinkURLString,
+            inboxCount: inboxCount,
+            todayCount: todayCount,
+            overdueCount: overdueCount,
+            doneCount: doneCount,
+            previewTasks: sanitizedPreviewTasks(previewTasks)
+        )
+    }
+
+    private static func sanitizedPreviewTasks(_ previewTasks: [String]) -> [String] {
+        previewTasks
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+            .prefix(3)
+            .map { String($0) }
+    }
+}
+
 public enum PlainWidgetSnapshotStore {
     public static func load(defaults: UserDefaults? = nil) -> PlainWidgetSnapshot? {
         let resolvedDefaults = defaults ?? UserDefaults(suiteName: PlainWidgetConfig.appGroupID) ?? .standard

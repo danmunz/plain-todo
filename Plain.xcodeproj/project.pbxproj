@@ -132,7 +132,6 @@
 		0CA591985F337DE78E0AFCF2 /* DatePhraseParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatePhraseParserTests.swift; sourceTree = "<group>"; };
 		0E07E99BD43CA029CB6BEF84 /* simple.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = simple.txt; sourceTree = "<group>"; };
 		12A5C8D49E9A1233D55055BA /* ArchiveTransaction.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArchiveTransaction.swift; sourceTree = "<group>"; };
-		162B13160548A28AE70793E2 /* PlainWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = PlainWidgetExtension.entitlements; sourceTree = "<group>"; };
 		222CF9A9474B5CA29171C450 /* TodoSnapshotLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodoSnapshotLoader.swift; sourceTree = "<group>"; };
 		2562428BF4C9E1273C67F909 /* PlainCoreTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PlainCoreTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		2AB15A3803A8B5693E9C7369 /* PlainShellModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlainShellModelTests.swift; sourceTree = "<group>"; };
@@ -167,7 +166,6 @@
 		E9763AECAAD6FEB1933CEB2C /* CoordinatedTodoStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoordinatedTodoStore.swift; sourceTree = "<group>"; };
 		EBF26B70F06E4FCF632C3FA2 /* PlainAppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PlainAppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		EC82247FB5E4D58AC83C0328 /* TaskMutation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskMutation.swift; sourceTree = "<group>"; };
-		EFBBEFB8C4700AAF54DD4C8D /* PlainApp.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = PlainApp.entitlements; sourceTree = "<group>"; };
 		F19F2405E02739CB6B515BF5 /* FixtureLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FixtureLoader.swift; sourceTree = "<group>"; };
 		FA805540AC69F08ED8151DA9 /* PlainApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PlainApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		FC678EA1B4985009EF51DAC2 /* PlainUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PlainUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -207,7 +205,6 @@
 				5CE5628E209438C7082CBF9C /* DeepLinkRoute.swift */,
 				799FA40D305345E972A46620 /* Info.plist */,
 				E58B1E68A47F8EE5DCDAC28D /* MenuBarContentView.swift */,
-				EFBBEFB8C4700AAF54DD4C8D /* PlainApp.entitlements */,
 				9074C8EDC17EAC36F9AF7CD9 /* PlainApp.swift */,
 				484F574EE539D1CC5379CBB9 /* PlainAppScenes.swift */,
 				BEE53DE05041E2F229C85657 /* PreferencesStore.swift */,
@@ -321,7 +318,6 @@
 			children = (
 				42B3C25E91072D3B93EBE196 /* Info.plist */,
 				2B18B8B791E6CB58F9E64430 /* PlainWidgetBundle.swift */,
-				162B13160548A28AE70793E2 /* PlainWidgetExtension.entitlements */,
 			);
 			name = PlainWidgetExtension;
 			path = Sources/PlainWidgetExtension;
