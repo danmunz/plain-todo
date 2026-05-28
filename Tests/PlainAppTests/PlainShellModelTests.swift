@@ -239,6 +239,29 @@ final class PlainShellModelTests: XCTestCase {
         XCTAssertTrue(snapshot.sourceDescription.contains("todo.txt"))
     }
 
+    func testModelPublishesEncodedWidgetDeepLinkForContextSelection() throws {
+        let temporaryDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: temporaryDirectory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: temporaryDirectory) }
+
+        let todoURL = temporaryDirectory.appendingPathComponent("todo.txt")
+        try "Call accountant @phone\nReview parser @desk\n".write(to: todoURL, atomically: true, encoding: .utf8)
+
+        let widgetSuiteName = "PlainWidgetDeepLinkTests.\(UUID().uuidString)"
+        let widgetDefaults = UserDefaults(suiteName: widgetSuiteName)!
+        widgetDefaults.removePersistentDomain(forName: widgetSuiteName)
+        defer { widgetDefaults.removePersistentDomain(forName: widgetSuiteName) }
+
+        let model = PlainShellModel(widgetSnapshotDefaults: widgetDefaults)
+        model.open(url: todoURL)
+        model.selection = .context("Phone Calls")
+
+        let snapshot = try XCTUnwrap(PlainWidgetSnapshotStore.load(defaults: widgetDefaults))
+        XCTAssertEqual(snapshot.selectionTitle, "@Phone Calls")
+        XCTAssertEqual(snapshot.deepLinkURL, "plain://context/Phone%20Calls")
+    }
+
     func testDeepLinksSelectSidebarViewsAfterInitialLoad() throws {
         let temporaryDirectory = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
