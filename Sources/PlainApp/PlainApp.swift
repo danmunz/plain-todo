@@ -941,6 +941,18 @@ struct PlainShellView: View {
                 model.selectedRowIDs = Set(model.visibleRows.map(\.id))
             }
             .keyboardShortcut("a")
+
+            Button("Extend Selection Down") {
+                guard focusedField == nil, editingRowID == nil else { return }
+                model.extendSelection(by: 1)
+            }
+            .keyboardShortcut(.downArrow, modifiers: [.shift])
+
+            Button("Extend Selection Up") {
+                guard focusedField == nil, editingRowID == nil else { return }
+                model.extendSelection(by: -1)
+            }
+            .keyboardShortcut(.upArrow, modifiers: [.shift])
         }
         .frame(width: 0, height: 0)
         .clipped()
@@ -2086,6 +2098,22 @@ final class PlainShellModel: ObservableObject {
 
         let nextIndex = max(0, min(visibleRows.count - 1, currentIndex + offset))
         self.selectedRowID = visibleRows[nextIndex].id
+    }
+
+    func extendSelection(by offset: Int) {
+        guard !visibleRows.isEmpty else { return }
+
+        guard let selectedRowID,
+              let currentIndex = visibleRows.firstIndex(where: { $0.id == selectedRowID })
+        else {
+            selectedRowID = visibleRows.first?.id
+            return
+        }
+
+        let nextIndex = max(0, min(visibleRows.count - 1, currentIndex + offset))
+        let nextID = visibleRows[nextIndex].id
+        selectedRowIDs.insert(nextID)
+        self.selectedRowID = nextID
     }
 
     func canMove(lineIdentity: LineIdentity, by offset: Int) -> Bool {
