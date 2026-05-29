@@ -1,3 +1,4 @@
+import AppKit
 import Combine
 import PlainCore
 import SwiftUI
@@ -54,6 +55,7 @@ struct PlainShellView: View {
     @State private var toastMessage: String?
     @State private var toastTask: Task<Void, Never>?
     @State private var scratchPadText = ""
+    @State private var highlightedRowID: LineIdentity?
     @FocusState private var focusedField: FocusField?
 
     init(model: PlainShellModel) {
@@ -227,17 +229,39 @@ struct PlainShellView: View {
     }
 
     private var onboardingView: some View {
-        PlaceholderCard(
-            title: "Point Plain at your todo.txt file.",
-            systemImage: "text.page",
-            message: "Start with an existing todo.txt file, or load the bundled sample while the bootstrap shell is still read-only.",
-            primaryActionTitle: "Open an existing file",
-            primaryAction: { isFileImporterPresented = true },
-            primaryActionAccessibilityIdentifier: "plain.onboarding.open",
-            secondaryActionTitle: "Use bundled sample",
-            secondaryAction: { model.loadBundledSample() },
-            secondaryActionAccessibilityIdentifier: "plain.onboarding.sample"
-        )
+        VStack(spacing: 10) {
+            Image(systemName: "text.page")
+                .font(.system(size: 28))
+                .foregroundStyle(.secondary)
+
+            Text("Point Plain at your todo.txt file.")
+                .font(.headline)
+
+            Text("Open an existing todo.txt, create a new one, or load the bundled sample.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+
+            HStack(spacing: 12) {
+                Button("Open an existing file") {
+                    isFileImporterPresented = true
+                }
+                .accessibilityIdentifier("plain.onboarding.open")
+
+                Button("Create a new file") {
+                    model.createNewFile()
+                }
+                .accessibilityIdentifier("plain.onboarding.create")
+
+                Button("Use bundled sample") {
+                    model.loadBundledSample()
+                }
+                .accessibilityIdentifier("plain.onboarding.sample")
+            }
+            .padding(.top, 8)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(24)
         .accessibilityIdentifier("plain.onboarding")
     }
 
@@ -291,35 +315,45 @@ struct PlainShellView: View {
                     .padding(.top, 12)
             }
 
-            HStack(spacing: 12) {
+            HStack(spacing: 8) {
+                Image(systemName: "plus")
+                    .foregroundStyle(.tertiary)
+                    .font(.body)
+
                 TextField("Add a task...", text: $newTaskText)
-                    .textFieldStyle(.roundedBorder)
+                    .textFieldStyle(.plain)
                     .focused($focusedField, equals: .newTask)
                     .disabled(!model.isEditable)
                     .accessibilityIdentifier("plain.add.textField")
                     .accessibilityLabel("Add a task")
                     .accessibilityHint("Type a task and press Return to add it")
                     .onSubmit {
-                        guard !newTaskText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-                            return
-                        }
-
-                        model.addTask(rawText: newTaskText, undoManager: undoManager)
-                        newTaskText = ""
+                        submitNewTask()
                     }
 
-                Button("Add") {
-                    guard !newTaskText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-                        return
-                    }
-
-                    model.addTask(rawText: newTaskText, undoManager: undoManager)
-                    newTaskText = ""
+                if newTaskText.isEmpty && focusedField != .newTask {
+                    Text("⌘N")
+                        .font(.caption)
+                        .foregroundStyle(.quaternary)
+                        .padding(.horizontal, 4)
+                        .padding(.vertical, 2)
+                        .background(RoundedRectangle(cornerRadius: 4, style: .continuous).fill(Color(nsColor: .separatorColor).opacity(0.5)))
                 }
-                .disabled(!model.isEditable || newTaskText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                .accessibilityIdentifier("plain.add.button")
+
+                if !newTaskText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    Button {
+                        submitNewTask()
+                    } label: {
+                        Image(systemName: "arrow.up.circle.fill")
+                            .foregroundStyle(Color.accentColor)
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(!model.isEditable)
+                    .accessibilityIdentifier("plain.add.button")
+                    .accessibilityLabel("Add task")
+                }
             }
-            .padding(12)
+            .padding(10)
             .background(Color(nsColor: .controlBackgroundColor))
             .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
             .padding(.horizontal, 20)
@@ -579,6 +613,12 @@ struct PlainShellView: View {
         }
         .opacity(row.isCompleted ? 0.5 : 1.0)
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: row.isCompleted)
+        .background {
+            if highlightedRowID == row.id {
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .fill(Color.accentColor.opacity(0.12))
+            }
+        }
         .overlay(alignment: .leading) {
             if model.selectedRowIDs.contains(row.id) {
                 RoundedRectangle(cornerRadius: 1)
@@ -1041,6 +1081,27 @@ struct PlainShellView: View {
             try? await Task.sleep(for: .seconds(4))
             guard !Task.isCancelled else { return }
             dismissToast()
+        }
+    }
+
+    private func submitNewTask() {
+        let text = newTaskText
+        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        model.addTask(rawText: text, undoManager: undoManager)
+        newTaskText = ""
+        flashHighlight(for: model.selectedRowID)
+    }
+
+    private func flashHighlight(for id: LineIdentity?) {
+        guard !reduceMotion, let id else { return }
+        highlightedRowID = id
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(1))
+            withAnimation(.easeOut(duration: 0.3)) {
+                if highlightedRowID == id {
+                    highlightedRowID = nil
+                }
+            }
         }
     }
 
@@ -1702,6 +1763,25 @@ final class PlainShellModel: ObservableObject {
         }
 
         open(url: sampleURL, persistSelection: false)
+    }
+
+    func createNewFile() {
+        let panel = NSSavePanel()
+        panel.title = "Create a new todo.txt"
+        panel.nameFieldStringValue = "todo.txt"
+        panel.allowedContentTypes = [.plainText]
+        panel.canCreateDirectories = true
+
+        guard panel.runModal() == .OK, let url = panel.url else {
+            return
+        }
+
+        do {
+            try Data().write(to: url)
+            open(url: url)
+        } catch {
+            present(error: error)
+        }
     }
 
     func present(error: Error) {
