@@ -1604,6 +1604,10 @@ final class PlainShellModel: ObservableObject {
         isPersistedSourceEditable
     }
 
+    var currentFileURL: URL? {
+        currentSourceURL
+    }
+
     var isWaitingForICloud: Bool {
         loadError?.contains("iCloud") == true && snapshot == nil
     }

@@ -191,8 +191,27 @@ struct PreferencesView: View {
 private struct GeneralPreferencesTab: View {
     @ObservedObject var preferences: PreferencesStore
 
+    private var currentFilePath: String {
+        UserDefaults.standard.string(forKey: "PlainSessionRestoreSourcePath") ?? "No file selected"
+    }
+
     var body: some View {
         Form {
+            LabeledContent("todo.txt file") {
+                HStack {
+                    Text(currentFilePath)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                        .help(currentFilePath)
+
+                    Button("Change...") {
+                        NotificationCenter.default.post(name: .plainOpenFile, object: nil)
+                    }
+                    .controlSize(.small)
+                }
+            }
+
             Picker("Archive behavior", selection: $preferences.archiveBehavior) {
                 ForEach(ArchiveBehavior.allCases) { behavior in
                     Text(behavior.title).tag(behavior)
