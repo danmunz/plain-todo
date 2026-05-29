@@ -1727,6 +1727,7 @@ final class PlainShellModel: ObservableObject {
             store?.stopMonitoring()
 
             let store = CoordinatedTodoStore(url: url)
+            store.createBackupBeforeWrite = preferences.createBackup
             store.onExternalChange = { [weak self] change in
                 DispatchQueue.main.async {
                     switch change {
@@ -2426,12 +2427,21 @@ final class PlainShellModel: ObservableObject {
     }
 
     private func preparedNewTaskText(from rawText: String, referenceDate: Date = Date()) -> String {
-        let transformedDueText = DatePhraseParser.preview(for: rawText, referenceDate: referenceDate)?.transformedText ?? rawText
-        guard preferences.automaticallyAddCreationDate else {
-            return transformedDueText
+        var text = DatePhraseParser.preview(for: rawText, referenceDate: referenceDate)?.transformedText ?? rawText
+
+        // Apply default priority if none specified and user set a default
+        if let defaultPriority = preferences.defaultPriority {
+            let parsedLine = TodoParser.parseLine(text, lineNumber: 0, originalLineEnding: nil)
+            if let task = parsedLine.task, !task.isCompleted, task.priority == nil {
+                text = "(\(defaultPriority)) \(text)"
+            }
         }
 
-        return applyingCreationDateIfNeeded(to: transformedDueText, referenceDate: referenceDate)
+        guard preferences.automaticallyAddCreationDate else {
+            return text
+        }
+
+        return applyingCreationDateIfNeeded(to: text, referenceDate: referenceDate)
     }
 
     private func applyingCreationDateIfNeeded(to rawText: String, referenceDate: Date) -> String {

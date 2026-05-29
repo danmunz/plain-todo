@@ -7,12 +7,13 @@ struct PlainAppScenes: Scene {
     let isRunningTests: Bool
 
     var body: some Scene {
-        PlainMainWindowScene(model: model, quickAddController: quickAddController)
+        PlainMainWindowScene(preferences: preferences, model: model, quickAddController: quickAddController)
         PlainSettingsScene(preferences: preferences)
     }
 }
 
 private struct PlainMainWindowScene: Scene {
+    @ObservedObject var preferences: PreferencesStore
     @ObservedObject var model: PlainShellModel
     @ObservedObject var quickAddController: QuickAddPanelController
 
@@ -23,6 +24,7 @@ private struct PlainMainWindowScene: Scene {
                 .onOpenURL { url in
                     model.openDeepLink(url)
                 }
+                .preferredColorScheme(preferences.theme.colorScheme)
         }
     }
 }

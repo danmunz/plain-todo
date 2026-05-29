@@ -14,6 +14,7 @@ public final class CoordinatedTodoStore: NSObject, NSFilePresenter {
 
     public var onSnapshotChange: SnapshotHandler?
     public var onExternalChange: ExternalChangeHandler?
+    public var createBackupBeforeWrite = false
 
     public private(set) var lastLoadedSnapshot: TodoFileSnapshot?
     public private(set) var lastLoadedArchiveSnapshot: TodoFileSnapshot?
@@ -389,6 +390,12 @@ public final class CoordinatedTodoStore: NSObject, NSFilePresenter {
     }
 
     private func write(_ text: String, to url: URL) throws {
+        if createBackupBeforeWrite && fileManager.fileExists(atPath: url.path) {
+            let bakURL = url.appendingPathExtension("bak")
+            try? fileManager.removeItem(at: bakURL)
+            try? fileManager.copyItem(at: url, to: bakURL)
+        }
+
         let temporaryURL = url.deletingLastPathComponent()
             .appendingPathComponent(".plain-\(UUID().uuidString).tmp")
 
