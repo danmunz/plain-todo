@@ -50,6 +50,8 @@ struct PlainShellView: View {
     @State private var editingRowID: LineIdentity?
     @State private var editingRawText = ""
     @State private var hoveredRowID: LineIdentity?
+    @State private var toastMessage: String?
+    @State private var toastTask: Task<Void, Never>?
     @State private var scratchPadText = ""
     @FocusState private var focusedField: FocusField?
 
@@ -150,6 +152,7 @@ struct PlainShellView: View {
                     for id in ids {
                         model.toggleCompletion(lineIdentity: id, undoManager: undoManager)
                     }
+                    showToast(ids.count == 1 ? "Task completed · " : "\(ids.count) tasks completed · ")
                 }
                 .keyboardShortcut("d")
 
@@ -411,6 +414,7 @@ struct PlainShellView: View {
                 for id in ids {
                     model.deleteRow(lineIdentity: id, undoManager: undoManager)
                 }
+                showToast(ids.count == 1 ? "Task deleted · " : "\(ids.count) tasks deleted · ")
             }
             .onExitCommand {
                 if isSearchPresented || focusedField == .search {
@@ -431,6 +435,26 @@ struct PlainShellView: View {
                         systemImage: model.emptyStateIcon,
                         message: model.emptyStateMessage
                     )
+                }
+            }
+            .overlay(alignment: .bottom) {
+                if let toastMessage {
+                    HStack(spacing: 8) {
+                        Text(toastMessage)
+                            .font(.caption)
+                        Button("Undo") {
+                            undoManager?.undo()
+                            dismissToast()
+                        }
+                        .font(.caption.weight(.semibold))
+                        .buttonStyle(.plain)
+                        .foregroundStyle(Color.accentColor)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    .padding(.bottom, 8)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
             }
 
@@ -833,6 +857,7 @@ struct PlainShellView: View {
                 for id in ids {
                     model.toggleCompletion(lineIdentity: id, undoManager: undoManager)
                 }
+                showToast(ids.count == 1 ? "Task completed · " : "\(ids.count) tasks completed · ")
             }
             .keyboardShortcut(.space, modifiers: [])
 
@@ -985,6 +1010,26 @@ struct PlainShellView: View {
 
         DispatchQueue.main.async {
             focusedField = .search
+        }
+    }
+
+    private func showToast(_ message: String) {
+        toastTask?.cancel()
+        withAnimation(.easeInOut(duration: 0.2)) {
+            toastMessage = message
+        }
+        toastTask = Task { @MainActor in
+            try? await Task.sleep(for: .seconds(4))
+            guard !Task.isCancelled else { return }
+            dismissToast()
+        }
+    }
+
+    private func dismissToast() {
+        toastTask?.cancel()
+        toastTask = nil
+        withAnimation(.easeInOut(duration: 0.2)) {
+            toastMessage = nil
         }
     }
 
