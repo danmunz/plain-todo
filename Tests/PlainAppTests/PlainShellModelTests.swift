@@ -262,6 +262,38 @@ final class PlainShellModelTests: XCTestCase {
         XCTAssertEqual(snapshot.deepLinkURL, "plain://context/Phone%20Calls")
     }
 
+    func testLoadInitialSnapshotWithoutSourceClearsWidgetSnapshot() throws {
+        let widgetSuiteName = "PlainWidgetClearOnLaunchTests.\(UUID().uuidString)"
+        let widgetDefaults = UserDefaults(suiteName: widgetSuiteName)!
+        widgetDefaults.removePersistentDomain(forName: widgetSuiteName)
+        defer { widgetDefaults.removePersistentDomain(forName: widgetSuiteName) }
+
+        PlainWidgetSnapshotStore.save(
+            PlainWidgetSnapshot(
+                generatedAt: Date(),
+                sourceDescription: "stale",
+                selectionTitle: "Inbox",
+                deepLinkURL: "plain://inbox",
+                inboxCount: 99,
+                todayCount: 50,
+                overdueCount: 10,
+                doneCount: 5,
+                previewTasks: ["Stale task"]
+            ),
+            defaults: widgetDefaults
+        )
+
+        let model = PlainShellModel(
+            launchArguments: [],
+            isUITesting: false,
+            widgetSnapshotDefaults: widgetDefaults
+        )
+
+        model.loadInitialSnapshotIfNeeded()
+
+        XCTAssertNil(PlainWidgetSnapshotStore.load(defaults: widgetDefaults))
+    }
+
     func testDeepLinksSelectSidebarViewsAfterInitialLoad() throws {
         let temporaryDirectory = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)

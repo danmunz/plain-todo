@@ -1331,6 +1331,9 @@ final class PlainShellModel: ObservableObject {
 
         if let initialURL = launch.url {
             open(url: initialURL, persistSelection: launch.persistSelection)
+        } else {
+            PlainWidgetSnapshotStore.clear(defaults: widgetSnapshotDefaults)
+            reloadWidgetTimeline()
         }
 
         if let deepLinkURL = launch.deepLinkURL {
