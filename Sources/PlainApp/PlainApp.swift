@@ -1397,6 +1397,8 @@ final class PlainShellModel: ObservableObject {
         let isCompleted: Bool
         let dueLabel: String?
         let isOverdue: Bool
+        /// 0 = overdue, 1 = today, 2 = upcoming, 3 = none
+        let dueBucketRank: Int
     }
 
     struct RowGroup: Identifiable {
@@ -2670,6 +2672,12 @@ final class PlainShellModel: ObservableObject {
                 .map { title, groupedRows in
                     RowGroup(id: title, title: title, rows: groupedRows)
                 }
+        case .dueDate:
+            return Dictionary(grouping: rows) { dueDateGroupTitle(for: $0, relativeTo: Date()) }
+                .sorted { lhs, rhs in dueDateGroupRank(lhs.key) < dueDateGroupRank(rhs.key) }
+                .map { title, groupedRows in
+                    RowGroup(id: title, title: title, rows: groupedRows)
+                }
         }
     }
 
@@ -2725,6 +2733,47 @@ final class PlainShellModel: ObservableObject {
         }
     }
 
+    private func dueDateGroupTitle(for row: Row, relativeTo now: Date) -> String {
+        switch row.dueBucketRank {
+        case 0:
+            return "Overdue"
+        case 1:
+            return "Today"
+        case 2:
+            return "Upcoming"
+        default:
+            return "No Due Date"
+        }
+    }
+
+    private func dueDateGroupRank(_ title: String) -> Int {
+        switch title {
+        case "Overdue":
+            return 0
+        case "Today":
+            return 1
+        case "Upcoming":
+            return 2
+        case "No Due Date":
+            return 3
+        default:
+            return 4
+        }
+    }
+
+    private func dueBucketSortRank(_ bucket: IndexedTask.DueBucket) -> Int {
+        switch bucket {
+        case .overdue:
+            return 0
+        case .today:
+            return 1
+        case .upcoming:
+            return 2
+        case .none:
+            return 3
+        }
+    }
+
     private func date(from todoDate: TodoDate) -> Date? {
         var components = DateComponents()
         components.calendar = Calendar(identifier: .gregorian)
@@ -2760,7 +2809,8 @@ final class PlainShellModel: ObservableObject {
                     creationDate: indexedTask.task.creationDate,
                     isCompleted: indexedTask.task.isCompleted,
                     dueLabel: indexedTask.dueLabel(relativeTo: Date()),
-                    isOverdue: indexedTask.dueBucket(relativeTo: Date()) == .overdue
+                    isOverdue: indexedTask.dueBucket(relativeTo: Date()) == .overdue,
+                    dueBucketRank: dueBucketSortRank(indexedTask.dueBucket(relativeTo: Date()))
                 )
             }
 
@@ -2777,7 +2827,8 @@ final class PlainShellModel: ObservableObject {
                 creationDate: nil,
                 isCompleted: false,
                 dueLabel: nil,
-                isOverdue: false
+                isOverdue: false,
+                dueBucketRank: 3
             )
         }
     }
@@ -2792,7 +2843,8 @@ final class PlainShellModel: ObservableObject {
             creationDate: indexedTask.task.creationDate,
             isCompleted: indexedTask.task.isCompleted,
             dueLabel: indexedTask.dueLabel(relativeTo: Date()),
-            isOverdue: indexedTask.dueBucket(relativeTo: Date()) == .overdue
+            isOverdue: indexedTask.dueBucket(relativeTo: Date()) == .overdue,
+            dueBucketRank: dueBucketSortRank(indexedTask.dueBucket(relativeTo: Date()))
         )
     }
 
@@ -2832,6 +2884,18 @@ final class PlainShellModel: ObservableObject {
             }
 
             return lhs.index < rhs.index
+        case .dueDate:
+            let lhsBucket = lhs.dueBucket(relativeTo: Date())
+            let rhsBucket = rhs.dueBucket(relativeTo: Date())
+            let lhsRank = dueBucketSortRank(lhsBucket)
+            let rhsRank = dueBucketSortRank(rhsBucket)
+            if lhsRank != rhsRank {
+                return lhsRank < rhsRank
+            }
+            if let lhsDate = lhs.parsedDueDate, let rhsDate = rhs.parsedDueDate, lhsDate != rhsDate {
+                return lhsDate < rhsDate
+            }
+            return lhs.index < rhs.index
         case .alphabetical:
             let comparison = lhs.task.body.localizedCaseInsensitiveCompare(rhs.task.body)
             if comparison != .orderedSame {
@@ -2858,7 +2922,8 @@ final class PlainShellModel: ObservableObject {
                 creationDate: task.creationDate,
                 isCompleted: true,
                 dueLabel: indexedTask.dueLabel(relativeTo: Date()),
-                isOverdue: false
+                isOverdue: false,
+                dueBucketRank: 3
             )
         }
     }
@@ -2963,7 +3028,7 @@ private extension PlainShellModel {
             task.metadata.first { $0.key == "due" }?.value
         }
 
-        private var parsedDueDate: Date? {
+        var parsedDueDate: Date? {
             guard let dueMetadataValue,
                   let due = TodoDate(rawValue: dueMetadataValue)
             else {

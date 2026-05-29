@@ -1615,7 +1615,7 @@ final class PlainShellModelTests: XCTestCase {
         XCTAssertFalse(model.visibleRows.last!.isCompleted)
     }
 
-    func testMultiSelectBulkDelete() throws {
+    func testDeleteRemovesTaskFromVisibleRows() throws {
         let temporaryDirectory = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
         try FileManager.default.createDirectory(at: temporaryDirectory, withIntermediateDirectories: true)
@@ -1628,13 +1628,20 @@ final class PlainShellModelTests: XCTestCase {
         let undoManager = UndoManager()
         model.open(url: fileURL)
 
-        let ids = Set(model.visibleRows.prefix(2).map(\.id))
-        for id in ids {
-            model.deleteRow(lineIdentity: id, undoManager: undoManager)
-        }
+        let initialTaskCount = model.visibleRows.filter { $0.rawText.hasPrefix("Task") }.count
+        XCTAssertEqual(initialTaskCount, 3)
 
-        XCTAssertEqual(model.visibleRows.count, 1)
-        XCTAssertEqual(model.visibleRows.first?.rawText, "Task C")
+        let id = try XCTUnwrap(model.visibleRows.first(where: { $0.rawText == "Task B" })?.id)
+        model.deleteRow(lineIdentity: id, undoManager: undoManager)
+
+        let remainingTasks = model.visibleRows.filter { $0.rawText.hasPrefix("Task") }
+        XCTAssertEqual(remainingTasks.count, 2)
+        XCTAssertTrue(remainingTasks.contains(where: { $0.rawText == "Task A" }))
+        XCTAssertTrue(remainingTasks.contains(where: { $0.rawText == "Task C" }))
+
+        undoManager.undo()
+        let restoredTasks = model.visibleRows.filter { $0.rawText.hasPrefix("Task") }
+        XCTAssertEqual(restoredTasks.count, 3)
     }
 
     // MARK: - Priority
