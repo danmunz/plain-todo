@@ -2193,7 +2193,12 @@ final class PlainShellModel: ObservableObject {
         }
 
         if let restoredURL = sessionRestore.restoredSourceURL() {
-            return (restoredURL, true, true, deepLinkURL)
+            if FileManager.default.fileExists(atPath: restoredURL.path) {
+                return (restoredURL, true, true, deepLinkURL)
+            } else {
+                sessionRestore.setSourceURL(nil)
+                sessionRestore.setSelection(nil)
+            }
         }
 
         return (nil, false, false, deepLinkURL)
