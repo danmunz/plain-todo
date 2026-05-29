@@ -42,6 +42,7 @@ struct PlainApp: App {
 struct PlainShellView: View {
     @ObservedObject private var model: PlainShellModel
     @Environment(\.undoManager) private var undoManager
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isFileImporterPresented = false
     @State private var isArchiveConfirmationPresented = false
     @State private var isSearchPresented = false
@@ -477,6 +478,7 @@ struct PlainShellView: View {
             } label: {
                 Image(systemName: row.isCompleted ? "checkmark.circle.fill" : "circle")
                     .foregroundStyle(row.isCompleted ? .secondary : .tertiary)
+                    .contentTransition(.symbolEffect(.replace))
             }
             .buttonStyle(.plain)
             .disabled(!model.isEditable)
@@ -576,6 +578,7 @@ struct PlainShellView: View {
             hoveredRowID = isHovered ? row.id : nil
         }
         .opacity(row.isCompleted ? 0.5 : 1.0)
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: row.isCompleted)
         .overlay(alignment: .leading) {
             if model.selectedRowIDs.contains(row.id) {
                 RoundedRectangle(cornerRadius: 1)
@@ -1015,8 +1018,12 @@ struct PlainShellView: View {
 
     private func showToast(_ message: String) {
         toastTask?.cancel()
-        withAnimation(.easeInOut(duration: 0.2)) {
+        if reduceMotion {
             toastMessage = message
+        } else {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                toastMessage = message
+            }
         }
         toastTask = Task { @MainActor in
             try? await Task.sleep(for: .seconds(4))
@@ -1028,8 +1035,12 @@ struct PlainShellView: View {
     private func dismissToast() {
         toastTask?.cancel()
         toastTask = nil
-        withAnimation(.easeInOut(duration: 0.2)) {
+        if reduceMotion {
             toastMessage = nil
+        } else {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                toastMessage = nil
+            }
         }
     }
 
