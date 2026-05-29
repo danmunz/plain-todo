@@ -1250,6 +1250,7 @@ private struct SyntaxHighlightedText: View {
     let text: String
     let query: String
     var strikethrough = false
+    @Environment(\.plainFontSize) private var fontSize
 
     var body: some View {
         let attributed = buildAttributedString()
@@ -1280,11 +1281,13 @@ private struct SyntaxHighlightedText: View {
     private func coloredAttributedString(_ segment: String) -> AttributedString {
         var result = AttributedString()
         let words = segment.split(separator: " ", omittingEmptySubsequences: false)
+        let baseFont = Font.system(size: fontSize)
+        let mediumFont = Font.system(size: fontSize, weight: .medium)
 
         for (i, word) in words.enumerated() {
             if i > 0 {
                 var space = AttributedString(" ")
-                space.font = .body
+                space.font = baseFont
                 space.foregroundColor = .primary
                 result.append(space)
             }
@@ -1292,22 +1295,22 @@ private struct SyntaxHighlightedText: View {
             let w = String(word)
             if w.hasPrefix("+") && w.count > 1 {
                 var attr = AttributedString(w)
-                attr.font = .body.weight(.medium)
+                attr.font = mediumFont
                 attr.foregroundColor = .teal
                 result.append(attr)
             } else if w.hasPrefix("@") && w.count > 1 {
                 var attr = AttributedString(w)
-                attr.font = .body.weight(.medium)
+                attr.font = mediumFont
                 attr.foregroundColor = .purple
                 result.append(attr)
             } else if w.contains(":") && !w.hasPrefix(":") && !w.hasSuffix(":") && w.count > 2 {
                 var attr = AttributedString(w)
-                attr.font = .body
+                attr.font = baseFont
                 attr.foregroundColor = .secondary
                 result.append(attr)
             } else {
                 var attr = AttributedString(w)
-                attr.font = .body
+                attr.font = baseFont
                 attr.foregroundColor = .primary
                 result.append(attr)
             }

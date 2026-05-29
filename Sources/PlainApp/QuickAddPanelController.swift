@@ -284,13 +284,31 @@ struct MainWindowRegistrationView: View {
     @Environment(\.openWindow) private var openWindow
 
     var body: some View {
-        Color.clear
-            .frame(width: 0, height: 0)
-            .onAppear {
-                controller.revealMainWindow = {
-                    NSApp.activate(ignoringOtherApps: true)
-                    openWindow(id: "main")
-                }
+        WindowAccessor { window in
+            window.setFrameAutosaveName("PlainMainWindow")
+        }
+        .frame(width: 0, height: 0)
+        .onAppear {
+            controller.revealMainWindow = {
+                NSApp.activate(ignoringOtherApps: true)
+                openWindow(id: "main")
             }
+        }
     }
+}
+
+private struct WindowAccessor: NSViewRepresentable {
+    let onWindow: (NSWindow) -> Void
+
+    func makeNSView(context: Context) -> NSView {
+        let view = NSView()
+        DispatchQueue.main.async {
+            if let window = view.window {
+                onWindow(window)
+            }
+        }
+        return view
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {}
 }

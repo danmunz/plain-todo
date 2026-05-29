@@ -25,6 +25,7 @@ private struct PlainMainWindowScene: Scene {
                     model.openDeepLink(url)
                 }
                 .preferredColorScheme(preferences.theme.colorScheme)
+                .environment(\.plainFontSize, preferences.fontSize)
         }
     }
 }

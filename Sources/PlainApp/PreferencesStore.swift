@@ -1,6 +1,17 @@
 import AppKit
 import SwiftUI
 
+private struct PlainFontSizeKey: EnvironmentKey {
+    static let defaultValue: Double = 13
+}
+
+extension EnvironmentValues {
+    var plainFontSize: Double {
+        get { self[PlainFontSizeKey.self] }
+        set { self[PlainFontSizeKey.self] = newValue }
+    }
+}
+
 enum ArchiveBehavior: String, CaseIterable, Identifiable {
     case manual
     case automatic
