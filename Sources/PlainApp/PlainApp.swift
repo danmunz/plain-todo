@@ -127,6 +127,7 @@ struct PlainShellView: View {
                 }
             }
         }
+        .navigationTitle(model.windowTitle)
         .frame(minWidth: 760, minHeight: 440)
         .onChange(of: newTaskText) { _, updatedValue in
             model.updateDraftState(newTaskText: updatedValue, editingRowID: editingRowID, editingRawText: editingRawText)
@@ -679,6 +680,11 @@ struct PlainShellView: View {
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel(taskRowAccessibilityLabel(row))
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(Color.primary.opacity(0.06))
+                .frame(height: 0.5)
+        }
         .tag(row.id)
     }
 
@@ -1631,6 +1637,13 @@ final class PlainShellModel: ObservableObject {
 
     var statusText: String {
         "\(inboxCount) tasks · \(doneThisWeekCount) done this week · \(overdueCount) overdue"
+    }
+
+    var windowTitle: String {
+        if let url = currentSourceURL {
+            return url.lastPathComponent
+        }
+        return "Plain"
     }
 
     var archiveStatusText: String {
