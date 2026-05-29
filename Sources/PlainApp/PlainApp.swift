@@ -292,6 +292,8 @@ struct PlainShellView: View {
                     .focused($focusedField, equals: .newTask)
                     .disabled(!model.isEditable)
                     .accessibilityIdentifier("plain.add.textField")
+                    .accessibilityLabel("Add a task")
+                    .accessibilityHint("Type a task and press Return to add it")
                     .onSubmit {
                         guard !newTaskText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
                             return
@@ -438,6 +440,7 @@ struct PlainShellView: View {
             }
             .buttonStyle(.plain)
             .disabled(!model.isEditable)
+            .accessibilityLabel(row.isCompleted ? "Mark incomplete" : "Mark complete")
 
             VStack(alignment: .leading, spacing: 6) {
                 if editingRowID == row.id {
@@ -537,6 +540,8 @@ struct PlainShellView: View {
                     .padding(.vertical, 2)
             }
         }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(taskRowAccessibilityLabel(row))
         .tag(row.id)
     }
 
@@ -721,6 +726,15 @@ struct PlainShellView: View {
         .background(Color(nsColor: .controlBackgroundColor))
         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
         .accessibilityIdentifier("plain.conflict.banner")
+    }
+
+    private func taskRowAccessibilityLabel(_ row: PlainShellModel.Row) -> String {
+        var parts: [String] = []
+        if row.isCompleted { parts.append("Completed") }
+        if let p = row.priority { parts.append("Priority \(p)") }
+        parts.append(row.title)
+        if let due = row.dueLabel { parts.append(due) }
+        return parts.joined(separator: ", ")
     }
 
     private func startInlineEdit(for row: PlainShellModel.Row) {
