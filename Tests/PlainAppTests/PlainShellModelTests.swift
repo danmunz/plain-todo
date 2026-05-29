@@ -1586,4 +1586,152 @@ final class PlainShellModelTests: XCTestCase {
         model.selection = .context("work")
         XCTAssertFalse(model.canDragReorder)
     }
+
+    // MARK: - Multi-Select
+
+    func testMultiSelectBulkComplete() throws {
+        let temporaryDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: temporaryDirectory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: temporaryDirectory) }
+
+        let fileURL = temporaryDirectory.appendingPathComponent("todo.txt")
+        try "Task A\nTask B\nTask C\n".write(to: fileURL, atomically: true, encoding: .utf8)
+
+        let model = PlainShellModel()
+        let undoManager = UndoManager()
+        model.open(url: fileURL)
+
+        let ids = Set(model.visibleRows.prefix(2).map(\.id))
+        model.selectedRowIDs = ids
+        XCTAssertEqual(model.selectedRowIDs.count, 2)
+
+        for id in ids {
+            model.toggleCompletion(lineIdentity: id, undoManager: undoManager)
+        }
+
+        let completedCount = model.visibleRows.filter(\.isCompleted).count
+        XCTAssertEqual(completedCount, 2)
+        XCTAssertFalse(model.visibleRows.last!.isCompleted)
+    }
+
+    func testMultiSelectBulkDelete() throws {
+        let temporaryDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: temporaryDirectory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: temporaryDirectory) }
+
+        let fileURL = temporaryDirectory.appendingPathComponent("todo.txt")
+        try "Task A\nTask B\nTask C\n".write(to: fileURL, atomically: true, encoding: .utf8)
+
+        let model = PlainShellModel()
+        let undoManager = UndoManager()
+        model.open(url: fileURL)
+
+        let ids = Set(model.visibleRows.prefix(2).map(\.id))
+        for id in ids {
+            model.deleteRow(lineIdentity: id, undoManager: undoManager)
+        }
+
+        XCTAssertEqual(model.visibleRows.count, 1)
+        XCTAssertEqual(model.visibleRows.first?.rawText, "Task C")
+    }
+
+    // MARK: - Priority
+
+    func testSetPriorityUpdatesTaskLine() throws {
+        let temporaryDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: temporaryDirectory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: temporaryDirectory) }
+
+        let fileURL = temporaryDirectory.appendingPathComponent("todo.txt")
+        try "Buy groceries\n".write(to: fileURL, atomically: true, encoding: .utf8)
+
+        let model = PlainShellModel()
+        let undoManager = UndoManager()
+        model.open(url: fileURL)
+
+        let id = try XCTUnwrap(model.visibleRows.first?.id)
+        model.setPriority("A" as Character, lineIdentity: id, undoManager: undoManager)
+
+        let updated = try XCTUnwrap(model.visibleRows.first)
+        XCTAssertEqual(updated.priority, "A")
+
+        let updatedID = updated.id
+        model.setPriority(nil, lineIdentity: updatedID, undoManager: undoManager)
+        let cleared = try XCTUnwrap(model.visibleRows.first)
+        XCTAssertNil(cleared.priority)
+    }
+
+    func testSetPriorityUndoRestore() throws {
+        let temporaryDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: temporaryDirectory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: temporaryDirectory) }
+
+        let fileURL = temporaryDirectory.appendingPathComponent("todo.txt")
+        try "Buy groceries\n".write(to: fileURL, atomically: true, encoding: .utf8)
+
+        let model = PlainShellModel()
+        let undoManager = UndoManager()
+        model.open(url: fileURL)
+
+        let id = try XCTUnwrap(model.visibleRows.first?.id)
+        model.setPriority("B" as Character, lineIdentity: id, undoManager: undoManager)
+        XCTAssertEqual(model.visibleRows.first?.priority, "B")
+
+        undoManager.undo()
+        XCTAssertNil(model.visibleRows.first?.priority)
+
+        undoManager.redo()
+        XCTAssertEqual(model.visibleRows.first?.priority, "B")
+    }
+
+    // MARK: - Done This Week Count
+
+    func testDoneThisWeekCountTracksArchivedTasks() throws {
+        let temporaryDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: temporaryDirectory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: temporaryDirectory) }
+
+        let fileURL = temporaryDirectory.appendingPathComponent("todo.txt")
+        try "Open task\n".write(to: fileURL, atomically: true, encoding: .utf8)
+
+        let calendar = Calendar(identifier: .gregorian)
+        let components = calendar.dateComponents([.year, .month, .day], from: Date())
+        let today = String(format: "%04d-%02d-%02d", components.year ?? 0, components.month ?? 0, components.day ?? 0)
+
+        let doneURL = temporaryDirectory.appendingPathComponent("done.txt")
+        try "x \(today) \(today) Completed task\n".write(to: doneURL, atomically: true, encoding: .utf8)
+
+        let model = PlainShellModel()
+        model.open(url: fileURL)
+
+        XCTAssertGreaterThanOrEqual(model.doneThisWeekCount, 1)
+    }
+
+    // MARK: - Empty State
+
+    func testEmptyStateVariesBySidebarSelection() throws {
+        let temporaryDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: temporaryDirectory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: temporaryDirectory) }
+
+        let fileURL = temporaryDirectory.appendingPathComponent("todo.txt")
+        try "".write(to: fileURL, atomically: true, encoding: .utf8)
+
+        let model = PlainShellModel()
+        model.open(url: fileURL)
+
+        model.selection = .inbox
+        let inboxTitle = model.emptyStateTitle
+
+        model.selection = .today
+        let todayTitle = model.emptyStateTitle
+
+        XCTAssertNotEqual(inboxTitle, todayTitle)
+    }
 }
