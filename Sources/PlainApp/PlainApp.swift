@@ -144,11 +144,11 @@ struct PlainShellView: View {
                 .keyboardShortcut("n")
 
                 Button("Toggle Complete") {
-                    guard let selectedRowID = model.selectedRowID else {
-                        return
+                    let ids = model.selectedRowIDs
+                    guard !ids.isEmpty else { return }
+                    for id in ids {
+                        model.toggleCompletion(lineIdentity: id, undoManager: undoManager)
                     }
-
-                    model.toggleCompletion(lineIdentity: selectedRowID, undoManager: undoManager)
                 }
                 .keyboardShortcut("d")
 
@@ -350,7 +350,7 @@ struct PlainShellView: View {
                     .padding(.top, 8)
             }
 
-            List(selection: $model.selectedRowID) {
+            List(selection: $model.selectedRowIDs) {
                 if model.canDragReorder, let flatGroup = model.visibleGroups.first {
                     ForEach(flatGroup.rows) { row in
                         activeTaskRow(row)
@@ -388,11 +388,11 @@ struct PlainShellView: View {
                 }
             }
             .onDeleteCommand {
-                guard let selectedRowID = model.selectedRowID else {
-                    return
+                let ids = model.selectedRowIDs
+                guard !ids.isEmpty else { return }
+                for id in ids {
+                    model.deleteRow(lineIdentity: id, undoManager: undoManager)
                 }
-
-                model.deleteRow(lineIdentity: selectedRowID, undoManager: undoManager)
             }
             .onExitCommand {
                 if isSearchPresented || focusedField == .search {
@@ -530,7 +530,7 @@ struct PlainShellView: View {
         .padding(.vertical, 4)
         .opacity(row.isCompleted ? 0.5 : 1.0)
         .overlay(alignment: .leading) {
-            if model.selectedRowID == row.id {
+            if model.selectedRowIDs.contains(row.id) {
                 RoundedRectangle(cornerRadius: 1)
                     .fill(Color.accentColor)
                     .frame(width: 2)
@@ -793,13 +793,12 @@ struct PlainShellView: View {
             .keyboardShortcut("f")
 
             Button("Toggle Selected Completion") {
-                guard focusedField == nil,
-                      let selectedRowID = model.selectedRowID
-                else {
-                    return
+                guard focusedField == nil else { return }
+                let ids = model.selectedRowIDs
+                guard !ids.isEmpty else { return }
+                for id in ids {
+                    model.toggleCompletion(lineIdentity: id, undoManager: undoManager)
                 }
-
-                model.toggleCompletion(lineIdentity: selectedRowID, undoManager: undoManager)
             }
             .keyboardShortcut(.space, modifiers: [])
 
@@ -1296,7 +1295,19 @@ final class PlainShellModel: ObservableObject {
             refreshVisibleRows()
         }
     }
-    @Published var selectedRowID: LineIdentity?
+    @Published var selectedRowIDs: Set<LineIdentity> = []
+
+    var selectedRowID: LineIdentity? {
+        get { selectedRowIDs.first }
+        set {
+            if let newValue {
+                selectedRowIDs = [newValue]
+            } else {
+                selectedRowIDs = []
+            }
+        }
+    }
+
     @Published private(set) var snapshot: TodoFileSnapshot?
     @Published private(set) var archiveSnapshot: TodoFileSnapshot?
     @Published private(set) var visibleRows: [Row] = []
