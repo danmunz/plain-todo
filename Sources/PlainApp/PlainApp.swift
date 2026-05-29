@@ -389,6 +389,21 @@ struct PlainShellView: View {
                     break
                 }
             }
+            .onKeyPress(characters: .init(charactersIn: "jk")) { press in
+                guard focusedField == nil, editingRowID == nil else {
+                    return .ignored
+                }
+                switch press.characters {
+                case "j":
+                    model.moveSelection(by: 1)
+                    return .handled
+                case "k":
+                    model.moveSelection(by: -1)
+                    return .handled
+                default:
+                    return .ignored
+                }
+            }
             .onDeleteCommand {
                 let ids = model.selectedRowIDs
                 guard !ids.isEmpty else { return }
