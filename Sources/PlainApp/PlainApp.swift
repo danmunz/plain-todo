@@ -84,8 +84,6 @@ struct PlainShellView: View {
                         .tag(SidebarSelection.today)
                     SidebarRow(title: "Overdue", count: model.overdueCount)
                         .tag(SidebarSelection.overdue)
-                    SidebarRow(title: "Done", count: model.doneCount)
-                        .tag(SidebarSelection.done)
                 }
 
                 if !model.projectCounts.isEmpty {
@@ -104,6 +102,11 @@ struct PlainShellView: View {
                                 .tag(SidebarSelection.context(context.name))
                         }
                     }
+                }
+
+                Section {
+                    SidebarRow(title: "Done", count: model.doneCount)
+                        .tag(SidebarSelection.done)
                 }
             }
             .accessibilityIdentifier("plain.sidebar")
