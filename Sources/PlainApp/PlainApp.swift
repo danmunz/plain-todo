@@ -856,6 +856,38 @@ struct PlainShellView: View {
             }
             .keyboardShortcut("S", modifiers: [.command, .shift])
 
+            Button("Set Priority A") {
+                guard focusedField == nil else { return }
+                for id in model.selectedRowIDs {
+                    model.setPriority("A", lineIdentity: id, undoManager: undoManager)
+                }
+            }
+            .keyboardShortcut("1")
+
+            Button("Set Priority B") {
+                guard focusedField == nil else { return }
+                for id in model.selectedRowIDs {
+                    model.setPriority("B", lineIdentity: id, undoManager: undoManager)
+                }
+            }
+            .keyboardShortcut("2")
+
+            Button("Set Priority C") {
+                guard focusedField == nil else { return }
+                for id in model.selectedRowIDs {
+                    model.setPriority("C", lineIdentity: id, undoManager: undoManager)
+                }
+            }
+            .keyboardShortcut("3")
+
+            Button("Clear Priority") {
+                guard focusedField == nil else { return }
+                for id in model.selectedRowIDs {
+                    model.setPriority(nil, lineIdentity: id, undoManager: undoManager)
+                }
+            }
+            .keyboardShortcut("0")
+
             Button("Select All") {
                 guard focusedField == nil else { return }
                 model.selectedRowIDs = Set(model.visibleRows.map(\.id))
