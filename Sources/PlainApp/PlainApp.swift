@@ -528,6 +528,15 @@ struct PlainShellView: View {
             }
         }
         .padding(.vertical, 4)
+        .opacity(row.isCompleted ? 0.5 : 1.0)
+        .overlay(alignment: .leading) {
+            if model.selectedRowID == row.id {
+                RoundedRectangle(cornerRadius: 1)
+                    .fill(Color.accentColor)
+                    .frame(width: 2)
+                    .padding(.vertical, 2)
+            }
+        }
         .tag(row.id)
     }
 
@@ -1070,37 +1079,37 @@ private struct SyntaxHighlightedText: View {
 
     private func coloredAttributedString(_ segment: String) -> AttributedString {
         var result = AttributedString()
-        let scanner = Scanner(string: segment)
-        scanner.charactersToBeSkipped = nil
+        let words = segment.split(separator: " ", omittingEmptySubsequences: false)
 
-        while !scanner.isAtEnd {
-            if let plain = scanner.scanUpToCharacters(from: CharacterSet(charactersIn: "+@")) {
-                var attr = AttributedString(plain)
+        for (i, word) in words.enumerated() {
+            if i > 0 {
+                var space = AttributedString(" ")
+                space.font = .body
+                space.foregroundColor = .primary
+                result.append(space)
+            }
+
+            let w = String(word)
+            if w.hasPrefix("+") && w.count > 1 {
+                var attr = AttributedString(w)
+                attr.font = .body.weight(.medium)
+                attr.foregroundColor = .teal
+                result.append(attr)
+            } else if w.hasPrefix("@") && w.count > 1 {
+                var attr = AttributedString(w)
+                attr.font = .body.weight(.medium)
+                attr.foregroundColor = .purple
+                result.append(attr)
+            } else if w.contains(":") && !w.hasPrefix(":") && !w.hasSuffix(":") && w.count > 2 {
+                var attr = AttributedString(w)
+                attr.font = .body
+                attr.foregroundColor = .secondary
+                result.append(attr)
+            } else {
+                var attr = AttributedString(w)
                 attr.font = .body
                 attr.foregroundColor = .primary
                 result.append(attr)
-            }
-
-            if scanner.isAtEnd { break }
-
-            let currentIndex = scanner.currentIndex
-            let char = segment[currentIndex]
-
-            if char == "+" || char == "@" {
-                let start = currentIndex
-                scanner.currentIndex = segment.index(after: currentIndex)
-                if let word = scanner.scanCharacters(from: .alphanumerics.union(CharacterSet(charactersIn: "-_"))) {
-                    let tag = String(char) + word
-                    var attr = AttributedString(tag)
-                    attr.font = .body.weight(.medium)
-                    attr.foregroundColor = char == "+" ? .teal : .purple
-                    result.append(attr)
-                } else {
-                    var attr = AttributedString(String(char))
-                    attr.font = .body
-                    attr.foregroundColor = .primary
-                    result.append(attr)
-                }
             }
         }
 
