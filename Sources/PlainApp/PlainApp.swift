@@ -56,6 +56,7 @@ struct PlainShellView: View {
     @State private var toastTask: Task<Void, Never>?
     @State private var scratchPadText = ""
     @State private var highlightedRowID: LineIdentity?
+    @State private var columnVisibility: NavigationSplitViewVisibility = .all
     @FocusState private var focusedField: FocusField?
 
     init(model: PlainShellModel) {
@@ -63,7 +64,7 @@ struct PlainShellView: View {
     }
 
     var body: some View {
-        NavigationSplitView {
+        NavigationSplitView(columnVisibility: $columnVisibility) {
             List(selection: $model.selection) {
                 Section("Smart Filters") {
                     SidebarRow(title: "Inbox", count: model.inboxCount)
@@ -611,6 +612,35 @@ struct PlainShellView: View {
         .onHover { isHovered in
             hoveredRowID = isHovered ? row.id : nil
         }
+        .contextMenu {
+            Button(row.isCompleted ? "Mark Incomplete" : "Mark Complete") {
+                model.toggleCompletion(lineIdentity: row.id, undoManager: undoManager)
+            }
+            Button("Edit") {
+                startInlineEdit(for: row)
+            }
+            Divider()
+            Menu("Priority") {
+                Button("A") { model.setPriority("A", lineIdentity: row.id, undoManager: undoManager) }
+                Button("B") { model.setPriority("B", lineIdentity: row.id, undoManager: undoManager) }
+                Button("C") { model.setPriority("C", lineIdentity: row.id, undoManager: undoManager) }
+                Divider()
+                Button("Clear") { model.setPriority(nil, lineIdentity: row.id, undoManager: undoManager) }
+            }
+            Divider()
+            Button("Move Up") {
+                model.moveRow(lineIdentity: row.id, by: -1, undoManager: undoManager)
+            }
+            .disabled(!model.canMove(lineIdentity: row.id, by: -1))
+            Button("Move Down") {
+                model.moveRow(lineIdentity: row.id, by: 1, undoManager: undoManager)
+            }
+            .disabled(!model.canMove(lineIdentity: row.id, by: 1))
+            Divider()
+            Button("Delete", role: .destructive) {
+                model.deleteRow(lineIdentity: row.id, undoManager: undoManager)
+            }
+        }
         .opacity(row.isCompleted ? 0.5 : 1.0)
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: row.isCompleted)
         .background {
@@ -993,6 +1023,13 @@ struct PlainShellView: View {
                 model.extendSelection(by: -1)
             }
             .keyboardShortcut(.upArrow, modifiers: [.shift])
+
+            Button("Toggle Sidebar") {
+                withAnimation {
+                    columnVisibility = columnVisibility == .detailOnly ? .all : .detailOnly
+                }
+            }
+            .keyboardShortcut("\\", modifiers: [.command])
         }
         .frame(width: 0, height: 0)
         .clipped()
