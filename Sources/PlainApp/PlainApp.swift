@@ -855,6 +855,12 @@ struct PlainShellView: View {
                 model.cycleSortMode()
             }
             .keyboardShortcut("S", modifiers: [.command, .shift])
+
+            Button("Select All") {
+                guard focusedField == nil else { return }
+                model.selectedRowIDs = Set(model.visibleRows.map(\.id))
+            }
+            .keyboardShortcut("a")
         }
         .frame(width: 0, height: 0)
         .clipped()
