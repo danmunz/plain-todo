@@ -8,12 +8,6 @@ struct PlainAppScenes: Scene {
 
     var body: some Scene {
         PlainMainWindowScene(model: model, quickAddController: quickAddController)
-        PlainMenuBarScene(
-            preferences: preferences,
-            model: model,
-            quickAddController: quickAddController,
-            isRunningTests: isRunningTests
-        )
         PlainSettingsScene(preferences: preferences)
     }
 }
