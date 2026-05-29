@@ -16,6 +16,7 @@ private enum FocusField: Hashable {
 extension Notification.Name {
     static let plainOpenFile = Notification.Name("plainOpenFile")
     static let plainFocusInputBar = Notification.Name("plainFocusInputBar")
+    static let plainToggleSidebar = Notification.Name("plainToggleSidebar")
 }
 
 @main
@@ -61,7 +62,12 @@ struct PlainShellView: View {
     @State private var toastTask: Task<Void, Never>?
     @State private var scratchPadText = ""
     @State private var highlightedRowID: LineIdentity?
-    @State private var columnVisibility: NavigationSplitViewVisibility = .all
+    @State private var columnVisibility: NavigationSplitViewVisibility = {
+        if UserDefaults.standard.bool(forKey: "PlainSidebarCollapsed") {
+            return .detailOnly
+        }
+        return .all
+    }()
     @FocusState private var focusedField: FocusField?
 
     init(model: PlainShellModel) {
@@ -232,6 +238,14 @@ struct PlainShellView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .plainFocusInputBar)) { _ in
             focusedField = .newTask
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .plainToggleSidebar)) { _ in
+            withAnimation {
+                columnVisibility = columnVisibility == .detailOnly ? .all : .detailOnly
+            }
+        }
+        .onChange(of: columnVisibility) { _, newValue in
+            UserDefaults.standard.set(newValue == .detailOnly, forKey: "PlainSidebarCollapsed")
         }
     }
 

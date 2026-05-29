@@ -51,6 +51,20 @@ private struct PlainMainWindowScene: Scene {
                 }
             }
 
+            CommandGroup(after: .toolbar) {
+                Button("Toggle Sidebar") {
+                    NotificationCenter.default.post(name: .plainToggleSidebar, object: nil)
+                }
+                .keyboardShortcut("\\", modifiers: [.command])
+
+                Divider()
+
+                Button("Cycle Sort Mode") {
+                    model.cycleSortMode()
+                }
+                .keyboardShortcut("S", modifiers: [.command, .shift])
+            }
+
             CommandGroup(replacing: .appInfo) {
                 Button("About Plain") {
                     NSApplication.shared.orderFrontStandardAboutPanel(options: [
