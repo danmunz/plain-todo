@@ -409,9 +409,9 @@ struct PlainShellView: View {
             .overlay {
                 if model.visibleRows.isEmpty {
                     PlaceholderCard(
-                        title: model.hasActiveSearch ? "No matching tasks" : "Nothing here yet",
-                        systemImage: "line.3.horizontal.decrease.circle",
-                        message: model.hasActiveSearch ? "Try a different search or clear the active filter." : "This view is empty for the current filter."
+                        title: model.emptyStateTitle,
+                        systemImage: model.emptyStateIcon,
+                        message: model.emptyStateMessage
                     )
                 }
             }
@@ -613,7 +613,7 @@ struct PlainShellView: View {
                     PlaceholderCard(
                         title: model.hasActiveSearch ? "No matching archived tasks" : "Nothing archived yet",
                         systemImage: "archivebox",
-                        message: model.hasActiveSearch ? "Try a different search or clear the active filter." : "Archive completed tasks to move them into done.txt."
+                        message: model.hasActiveSearch ? "Try a different search or clear the active filter." : "Archive completed tasks to move them here."
                     )
                 }
             }
@@ -1344,6 +1344,42 @@ final class PlainShellModel: ObservableObject {
 
     var archiveStatusText: String {
         "\(doneCount) archived tasks"
+    }
+
+    var emptyStateTitle: String {
+        if hasActiveSearch { return "No matching tasks" }
+        switch selection {
+        case .inbox: return "No tasks"
+        case .today: return "Nothing due today"
+        case .overdue: return "Nothing overdue"
+        case .done: return "Nothing archived yet"
+        case .project(let p): return "No +\(p) tasks"
+        case .context(let c): return "No @\(c) tasks"
+        }
+    }
+
+    var emptyStateMessage: String {
+        if hasActiveSearch { return "Try a different search or clear the active filter." }
+        switch selection {
+        case .inbox: return "Cmd+N to add a task."
+        case .today: return "No deadlines pressing — enjoy the breathing room."
+        case .overdue: return "All caught up. Nice."
+        case .done: return "Archive completed tasks to move them here."
+        case .project(let p): return "No tasks tagged +\(p) right now."
+        case .context(let c): return "No @\(c) — nice."
+        }
+    }
+
+    var emptyStateIcon: String {
+        if hasActiveSearch { return "magnifyingglass" }
+        switch selection {
+        case .inbox: return "text.badge.plus"
+        case .today: return "sun.max"
+        case .overdue: return "checkmark.seal"
+        case .done: return "archivebox"
+        case .project: return "folder"
+        case .context: return "at"
+        }
     }
 
     var hasActiveSearch: Bool {
