@@ -42,6 +42,7 @@
 		CFE2790ED0C792C6EB3E4D0A /* CoordinatedTodoStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 977C67E1763A75558845983E /* CoordinatedTodoStoreTests.swift */; };
 		D34417B3AF823E32AC16B81A /* QuickAddPanelController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7ED98B2DC5394AD5F61C6E04 /* QuickAddPanelController.swift */; };
 		E0C841D4C17598ED93261B83 /* PlainWidgetSnapshotStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A650051833ACF5C47D0E8A89 /* PlainWidgetSnapshotStoreTests.swift */; };
+		E112BAC2A82F951091555916 /* ParserPerformanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8F327AF68D9BF6DDB3CDE73 /* ParserPerformanceTests.swift */; };
 		E458B0654FDD930279AD7D68 /* roundtrip.txt in Resources */ = {isa = PBXBuildFile; fileRef = D08BC1DF22DCD8D99139809B /* roundtrip.txt */; };
 		F5D5F06AD52F322B99E97E44 /* PlainAppScenes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 484F574EE539D1CC5379CBB9 /* PlainAppScenes.swift */; };
 		F9041F187C458EF033491A06 /* PlainCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6709428629AF9F777D14DC8F /* PlainCore.framework */; };
@@ -160,6 +161,7 @@
 		B0E190EF4603D5AD3528E1A7 /* TodoSerializer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodoSerializer.swift; sourceTree = "<group>"; };
 		BEE53DE05041E2F229C85657 /* PreferencesStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreferencesStore.swift; sourceTree = "<group>"; };
 		C1D921A0086C0CD0191AED79 /* TaskMutationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskMutationTests.swift; sourceTree = "<group>"; };
+		C8F327AF68D9BF6DDB3CDE73 /* ParserPerformanceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParserPerformanceTests.swift; sourceTree = "<group>"; };
 		D08BC1DF22DCD8D99139809B /* roundtrip.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = roundtrip.txt; sourceTree = "<group>"; };
 		D24B5F77A61C59156CA864A4 /* SessionRestoreStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionRestoreStore.swift; sourceTree = "<group>"; };
 		E58B1E68A47F8EE5DCDAC28D /* MenuBarContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarContentView.swift; sourceTree = "<group>"; };
@@ -234,6 +236,7 @@
 				977C67E1763A75558845983E /* CoordinatedTodoStoreTests.swift */,
 				0CA591985F337DE78E0AFCF2 /* DatePhraseParserTests.swift */,
 				F19F2405E02739CB6B515BF5 /* FixtureLoader.swift */,
+				C8F327AF68D9BF6DDB3CDE73 /* ParserPerformanceTests.swift */,
 				A650051833ACF5C47D0E8A89 /* PlainWidgetSnapshotStoreTests.swift */,
 				C1D921A0086C0CD0191AED79 /* TaskMutationTests.swift */,
 				374BEC8118DDB9E142FF11EC /* TodoParserTests.swift */,
@@ -541,6 +544,7 @@
 				CFE2790ED0C792C6EB3E4D0A /* CoordinatedTodoStoreTests.swift in Sources */,
 				A105861484DC2ACD027C5415 /* DatePhraseParserTests.swift in Sources */,
 				7CE617DD1B3F0488924153CF /* FixtureLoader.swift in Sources */,
+				E112BAC2A82F951091555916 /* ParserPerformanceTests.swift in Sources */,
 				E0C841D4C17598ED93261B83 /* PlainWidgetSnapshotStoreTests.swift in Sources */,
 				7C58F584336AE27FA729D700 /* TaskMutationTests.swift in Sources */,
 				79BBADDE670C8446196AC5DE /* TodoParserTests.swift in Sources */,
