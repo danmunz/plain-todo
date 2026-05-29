@@ -13,6 +13,11 @@ private enum FocusField: Hashable {
     case search
 }
 
+extension Notification.Name {
+    static let plainOpenFile = Notification.Name("plainOpenFile")
+    static let plainFocusInputBar = Notification.Name("plainFocusInputBar")
+}
+
 @main
 struct PlainApp: App {
     @StateObject private var preferences: PreferencesStore
@@ -226,6 +231,12 @@ struct PlainShellView: View {
                 keepMineAction: { model.keepMineFromConflictDiff() },
                 closeAction: { model.dismissConflictDiff() }
             )
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .plainOpenFile)) { _ in
+            isFileImporterPresented = true
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .plainFocusInputBar)) { _ in
+            focusedField = .newTask
         }
     }
 

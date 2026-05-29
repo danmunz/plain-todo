@@ -259,6 +259,7 @@ private struct ShortcutsPreferencesTab: View {
         ("Archive completed", "⌘⇧A"),
         ("Scratch pad", "⌘E"),
         ("Quick add (global)", "⌃⌥T"),
+        ("Toggle sidebar", "⌘\\"),
     ]
 
     var body: some View {

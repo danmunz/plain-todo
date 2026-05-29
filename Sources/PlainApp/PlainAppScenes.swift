@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 struct PlainAppScenes: Scene {
     @ObservedObject var preferences: PreferencesStore
@@ -26,6 +27,29 @@ private struct PlainMainWindowScene: Scene {
                 }
                 .preferredColorScheme(preferences.theme.colorScheme)
                 .environment(\.plainFontSize, preferences.fontSize)
+        }
+        .commands {
+            CommandGroup(replacing: .newItem) {
+                Button("Open...") {
+                    NotificationCenter.default.post(name: .plainOpenFile, object: nil)
+                }
+                .keyboardShortcut("o")
+            }
+
+            CommandGroup(after: .newItem) {
+                Button("New Task") {
+                    NotificationCenter.default.post(name: .plainFocusInputBar, object: nil)
+                }
+                .keyboardShortcut("n")
+            }
+
+            CommandGroup(replacing: .help) {
+                Button("Plain Help") {
+                    if let url = URL(string: "https://github.com/todotxt/todo.txt") {
+                        NSWorkspace.shared.open(url)
+                    }
+                }
+            }
         }
     }
 }
