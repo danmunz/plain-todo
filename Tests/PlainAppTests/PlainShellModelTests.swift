@@ -1741,4 +1741,132 @@ final class PlainShellModelTests: XCTestCase {
 
         XCTAssertNotEqual(inboxTitle, todayTitle)
     }
+
+    // MARK: - New Preferences Persistence
+
+    func testThemePreferencePersistsAcrossStoreInstances() {
+        let (firstStore, defaults, suiteName) = makePreferencesStore()
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        XCTAssertEqual(firstStore.theme, .system)
+        firstStore.theme = .dark
+
+        let secondStore = PreferencesStore(userDefaults: defaults)
+        XCTAssertEqual(secondStore.theme, .dark)
+    }
+
+    func testFontSizePreferencePersistsAcrossStoreInstances() {
+        let (firstStore, defaults, suiteName) = makePreferencesStore()
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        XCTAssertEqual(firstStore.fontSize, 13)
+        firstStore.fontSize = 16
+
+        let secondStore = PreferencesStore(userDefaults: defaults)
+        XCTAssertEqual(secondStore.fontSize, 16)
+    }
+
+    func testDefaultPriorityPreferencePersistsAcrossStoreInstances() {
+        let (firstStore, defaults, suiteName) = makePreferencesStore()
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        XCTAssertNil(firstStore.defaultPriority)
+        firstStore.defaultPriority = "B"
+
+        let secondStore = PreferencesStore(userDefaults: defaults)
+        XCTAssertEqual(secondStore.defaultPriority, "B")
+    }
+
+    func testBackupPreferencePersistsAcrossStoreInstances() {
+        let (firstStore, defaults, suiteName) = makePreferencesStore()
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        XCTAssertFalse(firstStore.createBackup)
+        firstStore.createBackup = true
+
+        let secondStore = PreferencesStore(userDefaults: defaults)
+        XCTAssertTrue(secondStore.createBackup)
+    }
+
+    func testDebugLoggingPreferencePersistsAcrossStoreInstances() {
+        let (firstStore, defaults, suiteName) = makePreferencesStore()
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        XCTAssertFalse(firstStore.debugLogging)
+        firstStore.debugLogging = true
+
+        let secondStore = PreferencesStore(userDefaults: defaults)
+        XCTAssertTrue(secondStore.debugLogging)
+    }
+
+    // MARK: - Default Priority Behavior
+
+    func testAddTaskAppliesDefaultPriorityWhenSet() throws {
+        let (preferences, defaults, suiteName) = makePreferencesStore()
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        preferences.defaultPriority = "B"
+        preferences.automaticallyAddCreationDate = false
+
+        let temporaryDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: temporaryDirectory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: temporaryDirectory) }
+
+        let fileURL = temporaryDirectory.appendingPathComponent("todo.txt")
+        try "".write(to: fileURL, atomically: true, encoding: .utf8)
+
+        let model = PlainShellModel(preferences: preferences)
+        model.open(url: fileURL)
+        model.addTask(rawText: "Buy groceries", undoManager: nil)
+
+        XCTAssertEqual(model.visibleRows.last?.rawText, "(B) Buy groceries")
+    }
+
+    func testAddTaskDoesNotOverrideExplicitPriority() throws {
+        let (preferences, defaults, suiteName) = makePreferencesStore()
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        preferences.defaultPriority = "B"
+        preferences.automaticallyAddCreationDate = false
+
+        let temporaryDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: temporaryDirectory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: temporaryDirectory) }
+
+        let fileURL = temporaryDirectory.appendingPathComponent("todo.txt")
+        try "".write(to: fileURL, atomically: true, encoding: .utf8)
+
+        let model = PlainShellModel(preferences: preferences)
+        model.open(url: fileURL)
+        model.addTask(rawText: "(A) Urgent task", undoManager: nil)
+
+        XCTAssertEqual(model.visibleRows.last?.rawText, "(A) Urgent task")
+    }
+
+    // MARK: - Backup Behavior
+
+    func testBackupCreatesBAKFileBeforeWrite() throws {
+        let temporaryDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: temporaryDirectory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: temporaryDirectory) }
+
+        let fileURL = temporaryDirectory.appendingPathComponent("todo.txt")
+        let originalContent = "Original task\n"
+        try originalContent.write(to: fileURL, atomically: true, encoding: .utf8)
+
+        let (preferences, defaults, suiteName) = makePreferencesStore()
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        preferences.createBackup = true
+        preferences.automaticallyAddCreationDate = false
+
+        let model = PlainShellModel(preferences: preferences)
+        model.open(url: fileURL)
+        model.addTask(rawText: "New task", undoManager: nil)
+
+        let bakURL = fileURL.appendingPathExtension("bak")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: bakURL.path), "Expected .bak file to be created")
+        let bakContent = try String(contentsOf: bakURL, encoding: .utf8)
+        XCTAssertEqual(bakContent, originalContent)
+    }
 }
