@@ -2888,7 +2888,17 @@ private extension PlainShellModel {
                 return "Today"
             case .overdue:
                 return "Overdue"
-            case .upcoming, .none:
+            case .upcoming:
+                guard let date = parsedDueDate else { return due }
+                let calendar = Calendar(identifier: .gregorian)
+                if let tomorrow = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: now)),
+                   calendar.isDate(date, inSameDayAs: tomorrow) {
+                    return "Tomorrow"
+                }
+                let formatter = DateFormatter()
+                formatter.dateFormat = calendar.isDate(date, equalTo: now, toGranularity: .year) ? "MMM d" : "MMM d, yyyy"
+                return formatter.string(from: date)
+            case .none:
                 return due
             }
         }
