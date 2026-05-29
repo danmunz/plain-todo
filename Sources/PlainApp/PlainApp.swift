@@ -96,13 +96,13 @@ struct PlainShellView: View {
                     onboardingView
                 } else if let loadError = model.loadError {
                     PlaceholderCard(
-                        title: "Unable to load todo.txt",
-                        systemImage: "exclamationmark.triangle",
+                        title: model.isWaitingForICloud ? "Downloading from iCloud…" : "Unable to load todo.txt",
+                        systemImage: model.isWaitingForICloud ? "icloud.and.arrow.down" : "exclamationmark.triangle",
                         message: loadError,
-                        primaryActionTitle: "Open an existing file",
-                        primaryAction: { isFileImporterPresented = true },
-                        secondaryActionTitle: "Use bundled sample",
-                        secondaryAction: { model.loadBundledSample() }
+                        primaryActionTitle: model.isWaitingForICloud ? nil : "Open an existing file",
+                        primaryAction: model.isWaitingForICloud ? nil : { isFileImporterPresented = true },
+                        secondaryActionTitle: model.isWaitingForICloud ? nil : "Use bundled sample",
+                        secondaryAction: model.isWaitingForICloud ? nil : { model.loadBundledSample() }
                     )
                 } else {
                     detailView
@@ -1350,6 +1350,10 @@ final class PlainShellModel: ObservableObject {
         isPersistedSourceEditable
     }
 
+    var isWaitingForICloud: Bool {
+        loadError?.contains("iCloud") == true && snapshot == nil
+    }
+
     var hasExternalTodoConflict: Bool {
         externalChangeState == .todoConflict
     }
@@ -1498,6 +1502,25 @@ final class PlainShellModel: ObservableObject {
 
     func open(url: URL, persistSelection: Bool = true) {
         do {
+            // Check if file is in iCloud and not yet downloaded
+            if FileManager.default.isUbiquitousItem(at: url) {
+                var resourceValues = try url.resourceValues(forKeys: [.ubiquitousItemDownloadingStatusKey])
+                let status = resourceValues.ubiquitousItemDownloadingStatus
+                if status != .current {
+                    // Trigger download and show waiting state
+                    try FileManager.default.startDownloadingUbiquitousItem(at: url)
+                    loadError = "Waiting for iCloud to download \(url.lastPathComponent)…"
+                    currentSourceURL = url
+                    currentPersistSelection = persistSelection
+
+                    // Retry after a short delay
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
+                        self?.open(url: url, persistSelection: persistSelection)
+                    }
+                    return
+                }
+            }
+
             store?.stopMonitoring()
 
             let store = CoordinatedTodoStore(url: url)
