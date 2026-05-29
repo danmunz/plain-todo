@@ -49,6 +49,7 @@ struct PlainShellView: View {
     @State private var searchText = ""
     @State private var editingRowID: LineIdentity?
     @State private var editingRawText = ""
+    @State private var hoveredRowID: LineIdentity?
     @State private var scratchPadText = ""
     @FocusState private var focusedField: FocusField?
 
@@ -532,6 +533,7 @@ struct PlainShellView: View {
                             Image(systemName: "ellipsis.circle")
                                 .foregroundStyle(.secondary)
                         }
+                        .opacity(hoveredRowID == row.id ? 1.0 : 0.0)
                         .disabled(!model.isEditable)
                     }
 
@@ -546,6 +548,9 @@ struct PlainShellView: View {
             }
         }
         .padding(.vertical, 4)
+        .onHover { isHovered in
+            hoveredRowID = isHovered ? row.id : nil
+        }
         .opacity(row.isCompleted ? 0.5 : 1.0)
         .overlay(alignment: .leading) {
             if model.selectedRowIDs.contains(row.id) {
