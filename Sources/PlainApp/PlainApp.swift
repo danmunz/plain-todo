@@ -463,13 +463,12 @@ struct PlainShellView: View {
                         if let priority = row.priority {
                             Text("(\(priority))")
                                 .font(.callout.weight(.semibold))
-                                .foregroundStyle(.orange)
+                                .foregroundStyle(priorityColor(priority))
                         }
 
-                        HighlightedText(
+                        SyntaxHighlightedText(
                             text: row.title,
                             query: model.activeSearchQuery,
-                            font: .body,
                             strikethrough: row.isCompleted
                         )
 
@@ -569,13 +568,12 @@ struct PlainShellView: View {
                             if let priority = row.priority {
                                 Text("(\(priority))")
                                     .font(.callout.weight(.semibold))
-                                    .foregroundStyle(.orange)
+                                    .foregroundStyle(priorityColor(priority))
                             }
 
-                            HighlightedText(
+                            SyntaxHighlightedText(
                                 text: row.title,
                                 query: model.activeSearchQuery,
-                                font: .body,
                                 strikethrough: true
                             )
 
@@ -1030,6 +1028,96 @@ private struct HighlightedText: View {
     }
 }
 
+private func priorityColor(_ priority: String) -> Color {
+    switch priority {
+    case "A": return .red
+    case "B": return .orange
+    case "C": return .blue
+    default: return .secondary
+    }
+}
+
+private struct SyntaxHighlightedText: View {
+    let text: String
+    let query: String
+    var strikethrough = false
+
+    var body: some View {
+        let attributed = buildAttributedString()
+        if let matchRange = findMatchRange(in: text) {
+            let plainPrefix = String(text[..<matchRange.lowerBound])
+            let plainMatch = String(text[matchRange])
+            let plainSuffix = String(text[matchRange.upperBound...])
+
+            HStack(spacing: 0) {
+                styledText(plainPrefix)
+                styledText(plainMatch, highlighted: true)
+                styledText(plainSuffix)
+            }
+        } else {
+            styledText(text)
+        }
+    }
+
+    @ViewBuilder
+    private func styledText(_ segment: String, highlighted: Bool = false) -> some View {
+        Text(coloredAttributedString(segment))
+            .strikethrough(strikethrough)
+            .padding(.horizontal, highlighted ? 2 : 0)
+            .background(highlighted ? Color.yellow.opacity(0.28) : Color.clear)
+            .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
+    }
+
+    private func coloredAttributedString(_ segment: String) -> AttributedString {
+        var result = AttributedString()
+        let scanner = Scanner(string: segment)
+        scanner.charactersToBeSkipped = nil
+
+        while !scanner.isAtEnd {
+            if let plain = scanner.scanUpToCharacters(from: CharacterSet(charactersIn: "+@")) {
+                var attr = AttributedString(plain)
+                attr.font = .body
+                attr.foregroundColor = .primary
+                result.append(attr)
+            }
+
+            if scanner.isAtEnd { break }
+
+            let currentIndex = scanner.currentIndex
+            let char = segment[currentIndex]
+
+            if char == "+" || char == "@" {
+                let start = currentIndex
+                scanner.currentIndex = segment.index(after: currentIndex)
+                if let word = scanner.scanCharacters(from: .alphanumerics.union(CharacterSet(charactersIn: "-_"))) {
+                    let tag = String(char) + word
+                    var attr = AttributedString(tag)
+                    attr.font = .body.weight(.medium)
+                    attr.foregroundColor = char == "+" ? .teal : .purple
+                    result.append(attr)
+                } else {
+                    var attr = AttributedString(String(char))
+                    attr.font = .body
+                    attr.foregroundColor = .primary
+                    result.append(attr)
+                }
+            }
+        }
+
+        return result
+    }
+
+    private func buildAttributedString() -> AttributedString {
+        coloredAttributedString(text)
+    }
+
+    private func findMatchRange(in text: String) -> Range<String.Index>? {
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        return text.range(of: trimmed, options: [.caseInsensitive, .diacriticInsensitive])
+    }
+}
+
 private struct GroupHeader: View {
     let title: String
 
@@ -1211,6 +1299,7 @@ final class PlainShellModel: ObservableObject {
     @Published private(set) var todayCount = 0
     @Published private(set) var overdueCount = 0
     @Published private(set) var doneCount = 0
+    @Published private(set) var doneThisWeekCount = 0
     @Published private(set) var archivableCompletedTaskCount = 0
     @Published private(set) var externalChangeState: ExternalChangeState = .idle
     @Published private(set) var draftResetToken = 0
@@ -1250,7 +1339,7 @@ final class PlainShellModel: ObservableObject {
     }
 
     var statusText: String {
-        "\(inboxCount) tasks · \(doneCount) done · \(overdueCount) overdue"
+        "\(inboxCount) tasks · \(doneThisWeekCount) done this week · \(overdueCount) overdue"
     }
 
     var archiveStatusText: String {
@@ -1405,6 +1494,7 @@ final class PlainShellModel: ObservableObject {
         todayCount = 0
         overdueCount = 0
         doneCount = 0
+        doneThisWeekCount = 0
         archivableCompletedTaskCount = 0
         externalChangeState = .idle
         sourceDescription = "Bootstrap shell"
@@ -1994,6 +2084,7 @@ final class PlainShellModel: ObservableObject {
         todayCount = visibleActiveTasks.filter { $0.dueBucket(relativeTo: Date()) == .today }.count
         overdueCount = visibleActiveTasks.filter { $0.dueBucket(relativeTo: Date()) == .overdue }.count
         doneCount = archivedTasks.count
+        doneThisWeekCount = Self.countDoneThisWeek(archivedTasks)
         archivableCompletedTaskCount = completedTasks.count
         projectCounts = buildTagCounts(from: visibleActiveTasks, keyPath: \.task.projects)
         contextCounts = buildTagCounts(from: visibleActiveTasks, keyPath: \.task.contexts)
@@ -2589,6 +2680,24 @@ final class PlainShellModel: ObservableObject {
     private func sourceLabel(for url: URL, snapshot: TodoFileSnapshot) -> String {
         let newlineNote = snapshot.containsMixedLineEndings ? "mixed newlines" : snapshot.preferredLineEnding.rawValue.debugDescription
         return "Read-only bootstrap shell · \(url.lastPathComponent) · \(inboxCount) open · \(doneCount) done · \(newlineNote)"
+    }
+
+    static func countDoneThisWeek(_ tasks: [TodoTask]) -> Int {
+        let calendar = Calendar(identifier: .gregorian)
+        let now = Date()
+        guard let weekStart = calendar.dateInterval(of: .weekOfYear, for: now)?.start else {
+            return 0
+        }
+        return tasks.filter { task in
+            guard let cd = task.completionDate else { return false }
+            var components = DateComponents()
+            components.calendar = calendar
+            components.year = cd.year
+            components.month = cd.month
+            components.day = cd.day
+            guard let date = components.date else { return false }
+            return date >= weekStart && date <= now
+        }.count
     }
 }
 
