@@ -1869,4 +1869,92 @@ final class PlainShellModelTests: XCTestCase {
         let bakContent = try String(contentsOf: bakURL, encoding: .utf8)
         XCTAssertEqual(bakContent, originalContent)
     }
+
+    // MARK: - Window Title
+
+    func testWindowTitleShowsFilenameWhenFileIsLoaded() throws {
+        let temporaryDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: temporaryDirectory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: temporaryDirectory) }
+
+        let fileURL = temporaryDirectory.appendingPathComponent("todo.txt")
+        try "Buy milk\n".write(to: fileURL, atomically: true, encoding: .utf8)
+
+        let model = PlainShellModel()
+        XCTAssertEqual(model.windowTitle, "Plain")
+
+        model.open(url: fileURL)
+        XCTAssertEqual(model.windowTitle, "todo.txt")
+    }
+
+    func testWindowTitleShowsCustomFilename() throws {
+        let temporaryDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: temporaryDirectory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: temporaryDirectory) }
+
+        let fileURL = temporaryDirectory.appendingPathComponent("work-tasks.txt")
+        try "Review PR\n".write(to: fileURL, atomically: true, encoding: .utf8)
+
+        let model = PlainShellModel()
+        model.open(url: fileURL)
+        XCTAssertEqual(model.windowTitle, "work-tasks.txt")
+    }
+
+    // MARK: - Sidebar Collapse Persistence
+
+    func testSidebarCollapseStatePersistsAcrossStoreInstances() {
+        let suiteName = "SidebarCollapseTest.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        XCTAssertFalse(defaults.bool(forKey: "PlainSidebarCollapsed"))
+        defaults.set(true, forKey: "PlainSidebarCollapsed")
+        XCTAssertTrue(defaults.bool(forKey: "PlainSidebarCollapsed"))
+    }
+
+    // MARK: - Current File URL
+
+    func testCurrentFileURLReflectsOpenedFile() throws {
+        let temporaryDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: temporaryDirectory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: temporaryDirectory) }
+
+        let fileURL = temporaryDirectory.appendingPathComponent("todo.txt")
+        try "Task one\n".write(to: fileURL, atomically: true, encoding: .utf8)
+
+        let model = PlainShellModel()
+        XCTAssertNil(model.currentFileURL)
+
+        model.open(url: fileURL)
+        XCTAssertEqual(model.currentFileURL, fileURL)
+    }
+
+    // MARK: - Empty State Messages
+
+    func testEmptyStateMessagesAreContextual() throws {
+        let temporaryDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: temporaryDirectory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: temporaryDirectory) }
+
+        let fileURL = temporaryDirectory.appendingPathComponent("todo.txt")
+        try "\n".write(to: fileURL, atomically: true, encoding: .utf8)
+
+        let model = PlainShellModel()
+        model.open(url: fileURL)
+
+        model.selection = .inbox
+        XCTAssertEqual(model.emptyStateTitle, "No tasks")
+        XCTAssertTrue(model.emptyStateMessage.contains("Cmd+N"))
+
+        model.selection = .today
+        XCTAssertEqual(model.emptyStateTitle, "Nothing due today")
+
+        model.selection = .overdue
+        XCTAssertEqual(model.emptyStateTitle, "Nothing overdue")
+        XCTAssertTrue(model.emptyStateMessage.contains("Nice"))
+    }
 }
