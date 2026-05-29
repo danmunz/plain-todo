@@ -141,42 +141,18 @@ struct PlainShellView: View {
             resetDraftUI()
         }
         .toolbar {
-            ToolbarItemGroup(placement: .primaryAction) {
-                Button("Open") {
-                    isFileImporterPresented = true
-                }
-
-                Button("Use Sample") {
-                    model.loadBundledSample()
-                }
-
-                Button("New Task") {
-                    focusedField = .newTask
-                }
-                .keyboardShortcut("n")
-
-                Button("Toggle Complete") {
-                    let ids = model.selectedRowIDs
-                    guard !ids.isEmpty else { return }
-                    for id in ids {
-                        model.toggleCompletion(lineIdentity: id, undoManager: undoManager)
+            ToolbarItem(placement: .navigation) {
+                Button {
+                    withAnimation {
+                        columnVisibility = columnVisibility == .detailOnly ? .all : .detailOnly
                     }
-                    showToast(ids.count == 1 ? "Task completed · " : "\(ids.count) tasks completed · ")
+                } label: {
+                    Image(systemName: "sidebar.leading")
                 }
-                .keyboardShortcut("d")
+                .help("Toggle Sidebar (⌘\\)")
+            }
 
-                Button("Archive Completed") {
-                    isArchiveConfirmationPresented = true
-                }
-                .keyboardShortcut("A", modifiers: [.command, .shift])
-                .disabled(!model.isEditable || model.archivableCompletedTaskCount == 0)
-
-                Button(model.isScratchPadPresented ? "Save & Return" : "Scratch Pad") {
-                    toggleScratchPad()
-                }
-                .keyboardShortcut("e")
-                .disabled(!model.canToggleScratchPad)
-
+            ToolbarItemGroup(placement: .primaryAction) {
                 Picker("Sort", selection: Binding(get: { model.sortMode }, set: { model.setSortMode($0) })) {
                     ForEach(TaskSortMode.allCases) { sortMode in
                         Text(sortMode.title).tag(sortMode)
@@ -184,6 +160,25 @@ struct PlainShellView: View {
                 }
                 .pickerStyle(.menu)
                 .disabled(model.selection == .done)
+                .help("Sort Mode (⌘⇧S)")
+
+                Button {
+                    toggleScratchPad()
+                } label: {
+                    Image(systemName: model.isScratchPadPresented ? "doc.text.fill" : "doc.text")
+                }
+                .keyboardShortcut("e")
+                .disabled(!model.canToggleScratchPad)
+                .help(model.isScratchPadPresented ? "Save & Return (⌘E)" : "Scratch Pad (⌘E)")
+
+                Button {
+                    isArchiveConfirmationPresented = true
+                } label: {
+                    Image(systemName: "archivebox")
+                }
+                .keyboardShortcut("A", modifiers: [.command, .shift])
+                .disabled(!model.isEditable || model.archivableCompletedTaskCount == 0)
+                .help("Archive Completed (⌘⇧A)")
             }
         }
         .alert(

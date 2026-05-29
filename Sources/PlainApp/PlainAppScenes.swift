@@ -50,6 +50,20 @@ private struct PlainMainWindowScene: Scene {
                     }
                 }
             }
+
+            CommandGroup(replacing: .appInfo) {
+                Button("About Plain") {
+                    NSApplication.shared.orderFrontStandardAboutPanel(options: [
+                        .credits: NSAttributedString(
+                            string: "Plain reads your todo.txt.\nThat's it, really.",
+                            attributes: [
+                                .font: NSFont.systemFont(ofSize: 11),
+                                .foregroundColor: NSColor.secondaryLabelColor,
+                            ]
+                        ),
+                    ])
+                }
+            }
         }
     }
 }
