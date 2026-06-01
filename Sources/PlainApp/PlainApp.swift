@@ -77,36 +77,44 @@ struct PlainShellView: View {
     var body: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
             List(selection: $model.selection) {
-                Section("Smart Filters") {
+                Section {
                     SidebarRow(title: "Inbox", count: model.inboxCount)
                         .tag(SidebarSelection.inbox)
                     SidebarRow(title: "Today", count: model.todayCount)
                         .tag(SidebarSelection.today)
-                    SidebarRow(title: "Overdue", count: model.overdueCount)
+                    SidebarRow(title: "Overdue", count: model.overdueCount, isOverdue: model.overdueCount > 0)
                         .tag(SidebarSelection.overdue)
+                } header: {
+                    SidebarSectionHeader("SMART FILTERS")
                 }
 
                 if !model.projectCounts.isEmpty {
-                    Section("+projects") {
+                    Section {
                         ForEach(model.projectCounts, id: \.name) { project in
-                            SidebarRow(title: "+\(project.name)", count: project.count)
+                            SidebarRow(title: project.name, count: project.count)
                                 .tag(SidebarSelection.project(project.name))
                         }
+                    } header: {
+                        SidebarSectionHeader("+PROJECTS")
                     }
                 }
 
                 if !model.contextCounts.isEmpty {
-                    Section("@contexts") {
+                    Section {
                         ForEach(model.contextCounts, id: \.name) { context in
-                            SidebarRow(title: "@\(context.name)", count: context.count)
+                            SidebarRow(title: context.name, count: context.count)
                                 .tag(SidebarSelection.context(context.name))
                         }
+                    } header: {
+                        SidebarSectionHeader("@CONTEXTS")
                     }
                 }
 
                 Section {
                     SidebarRow(title: "Done", count: model.doneCount)
                         .tag(SidebarSelection.done)
+                } header: {
+                    SidebarSectionHeader("ARCHIVE")
                 }
             }
             .accessibilityIdentifier("plain.sidebar")
@@ -318,35 +326,28 @@ struct PlainShellView: View {
 
     private var activeTasksDetailView: some View {
         VStack(alignment: .leading, spacing: 0) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Plain")
-                    .font(.largeTitle.weight(.semibold))
-                Text(model.sourceDescription)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-
-                if let transientError = model.transientError {
-                    Text(transientError)
-                        .font(.caption)
-                        .foregroundStyle(.red)
-                }
+            if let transientError = model.transientError {
+                Text(transientError)
+                    .font(.caption)
+                    .foregroundStyle(PlainTokens.Status.destructive)
+                    .padding(.horizontal, Spacing.xl)
+                    .padding(.top, Spacing.md)
             }
-            .padding(.horizontal, 20)
-            .padding(.top, 20)
 
             if model.hasExternalTodoConflict {
                 conflictBanner
-                    .padding(.horizontal, 20)
-                    .padding(.top, 12)
+                    .padding(.horizontal, Spacing.xl)
+                    .padding(.top, Spacing.lg)
             }
 
-            HStack(spacing: 8) {
+            HStack(spacing: Spacing.sm) {
                 Image(systemName: "plus")
-                    .foregroundStyle(.tertiary)
-                    .font(.body)
+                    .foregroundStyle(PlainTokens.TextToken.muted)
+                    .font(.system(size: 14))
 
                 TextField("Add a task...", text: $newTaskText)
                     .textFieldStyle(.plain)
+                    .font(PlainType.inputBar(size: fontSize))
                     .focused($focusedField, equals: .newTask)
                     .disabled(!model.isEditable)
                     .accessibilityIdentifier("plain.add.textField")
@@ -356,13 +357,15 @@ struct PlainShellView: View {
                         submitNewTask()
                     }
 
+                Spacer()
+
                 if newTaskText.isEmpty && focusedField != .newTask {
                     Text("⌘N")
-                        .font(.caption)
-                        .foregroundStyle(.quaternary)
-                        .padding(.horizontal, 4)
-                        .padding(.vertical, 2)
-                        .background(RoundedRectangle(cornerRadius: 4, style: .continuous).fill(Color(nsColor: .separatorColor).opacity(0.5)))
+                        .font(PlainType.inputHint)
+                        .foregroundStyle(PlainTokens.TextToken.muted)
+                        .padding(.horizontal, Spacing.sm)
+                        .padding(.vertical, Spacing.xs)
+                        .background(RoundedRectangle(cornerRadius: Radius.sm, style: .continuous).fill(PlainTokens.Surface.input))
                 }
 
                 if !newTaskText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -378,28 +381,34 @@ struct PlainShellView: View {
                     .accessibilityLabel("Add task")
                 }
             }
-            .padding(10)
-            .background(Color(nsColor: .controlBackgroundColor))
-            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-            .padding(.horizontal, 20)
-            .padding(.top, 16)
+            .padding(.horizontal, Spacing.xl)
+            .padding(.vertical, Spacing.md)
+            .frame(height: Measurement.inputBarHeight)
+            .background(PlainTokens.Surface.input)
+            .overlay(
+                RoundedRectangle(cornerRadius: Radius.md, style: .continuous)
+                    .stroke(focusedField == .newTask ? PlainTokens.Border.inputFocused : PlainTokens.Border.input, lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
+            .padding(.horizontal, Spacing.xl)
+            .padding(.top, Spacing.xl)
 
             if let addTaskPreview {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Preview")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
-
-                    Text(addTaskPreview.transformedText)
-                        .font(.caption.monospaced())
-                        .textSelection(.enabled)
+                HStack(spacing: Spacing.sm) {
+                    Text("→")
+                        .foregroundStyle(PlainTokens.TextToken.muted)
+                    SyntaxHighlightedText(
+                        text: addTaskPreview.transformedText,
+                        query: ""
+                    )
                 }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 10)
-                .background(Color(nsColor: .controlBackgroundColor))
-                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                .padding(.horizontal, 20)
-                .padding(.top, 8)
+                .font(PlainType.taskMeta)
+                .padding(.horizontal, Spacing.lg)
+                .padding(.vertical, Spacing.md)
+                .background(PlainTokens.Surface.hover)
+                .clipShape(RoundedRectangle(cornerRadius: Radius.sm, style: .continuous))
+                .padding(.horizontal, Spacing.xl)
+                .padding(.top, Spacing.md)
             }
 
             if model.hasActiveSearch && !isSearchPresented {
@@ -499,60 +508,70 @@ struct PlainShellView: View {
             }
             .overlay(alignment: .bottom) {
                 if let toastMessage {
-                    HStack(spacing: 8) {
+                    HStack(spacing: Spacing.md) {
                         Text(toastMessage)
-                            .font(.caption)
+                            .font(PlainType.toastMessage)
                         Button("Undo") {
                             undoManager?.undo()
                             dismissToast()
                         }
-                        .font(.caption.weight(.semibold))
+                        .font(PlainType.toastMessage)
                         .buttonStyle(.plain)
-                        .foregroundStyle(Color.accentColor)
+                        .underline()
+                        .foregroundStyle(PlainTokens.TextToken.inverse)
                     }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-                    .padding(.bottom, 8)
+                    .foregroundStyle(PlainTokens.TextToken.inverse)
+                    .padding(.horizontal, Spacing.xl)
+                    .padding(.vertical, Spacing.md)
+                    .background(PlainTokens.Surface.toast, in: RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
+                    .shadow(color: Color(hex: 0x2C2A28, opacity: 0.12), radius: PlainShadow.toastRadius, x: 0, y: PlainShadow.toastY)
+                    .padding(.bottom, Spacing.xl)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
             }
 
             HStack {
                 Text(model.statusText)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(PlainType.statusBar)
+                    .foregroundStyle(PlainTokens.TextToken.muted)
                 Spacer()
             }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 12)
-            .background(Color(nsColor: .windowBackgroundColor))
+            .padding(.horizontal, Spacing.xl)
+            .frame(height: Measurement.statusBarHeight)
+            .overlay(alignment: .top) {
+                Rectangle()
+                    .fill(PlainTokens.Border.row)
+                    .frame(height: Measurement.rowSeparatorThickness)
+            }
         }
     }
 
+    @Environment(\.plainFontSize) private var fontSize
+
     private func activeTaskRow(_ row: PlainShellModel.Row) -> some View {
-        HStack {
+        HStack(spacing: Spacing.sm) {
+            // Completion circle
             Button {
                 model.toggleCompletion(lineIdentity: row.id, undoManager: undoManager)
             } label: {
-                Image(systemName: row.isCompleted ? "checkmark.circle.fill" : "circle")
-                    .foregroundStyle(row.isCompleted ? .secondary : .tertiary)
-                    .contentTransition(.symbolEffect(.replace))
+                completionCircle(row: row)
             }
             .buttonStyle(.plain)
             .disabled(!model.isEditable)
             .accessibilityLabel(row.isCompleted ? "Mark incomplete" : "Mark complete")
 
-            VStack(alignment: .leading, spacing: 6) {
-                if editingRowID == row.id {
+            if editingRowID == row.id {
+                // Inline edit mode
+                VStack(alignment: .leading, spacing: Spacing.sm) {
                     TextField("Edit line", text: $editingRawText)
                         .textFieldStyle(.roundedBorder)
+                        .font(PlainType.taskBody(size: fontSize))
                         .focused($focusedField, equals: .inlineEdit)
                         .onSubmit {
                             commitInlineEdit(for: row.id)
                         }
 
-                    HStack(spacing: 10) {
+                    HStack(spacing: Spacing.md) {
                         Button("Save") {
                             commitInlineEdit(for: row.id)
                         }
@@ -561,80 +580,94 @@ struct PlainShellView: View {
                         }
                         .keyboardShortcut(.cancelAction)
                     }
-                    .font(.caption)
-                } else {
-                    HStack(alignment: .firstTextBaseline, spacing: 8) {
-                        if let priority = row.priority {
-                            Text("(\(priority))")
-                                .font(.callout.weight(.semibold))
-                                .foregroundStyle(priorityColor(priority))
-                        }
-
-                        SyntaxHighlightedText(
-                            text: row.title,
-                            query: model.activeSearchQuery,
-                            strikethrough: row.isCompleted
-                        )
-
-                        Spacer()
-
-                        if let dueLabel = row.dueLabel {
-                            Text(dueLabel)
-                                .font(.caption.weight(.medium))
-                                .foregroundStyle(row.isOverdue ? .red : .secondary)
-                        }
-
-                        Menu {
-                            Button("Edit") {
-                                startInlineEdit(for: row)
-                            }
-                            Divider()
-                            Button("Priority A") {
-                                model.setPriority("A", lineIdentity: row.id, undoManager: undoManager)
-                            }
-                            Button("Priority B") {
-                                model.setPriority("B", lineIdentity: row.id, undoManager: undoManager)
-                            }
-                            Button("Priority C") {
-                                model.setPriority("C", lineIdentity: row.id, undoManager: undoManager)
-                            }
-                            Button("Clear Priority") {
-                                model.setPriority(nil, lineIdentity: row.id, undoManager: undoManager)
-                            }
-                            Divider()
-                            Button("Delete", role: .destructive) {
-                                model.deleteRow(lineIdentity: row.id, undoManager: undoManager)
-                            }
-                            Divider()
-                            Button("Move Up") {
-                                model.moveRow(lineIdentity: row.id, by: -1, undoManager: undoManager)
-                            }
-                            .disabled(!model.canMove(lineIdentity: row.id, by: -1))
-                            Button("Move Down") {
-                                model.moveRow(lineIdentity: row.id, by: 1, undoManager: undoManager)
-                            }
-                            .disabled(!model.canMove(lineIdentity: row.id, by: 1))
-                        } label: {
-                            Image(systemName: "ellipsis.circle")
-                                .foregroundStyle(.secondary)
-                        }
-                        .opacity(hoveredRowID == row.id ? 1.0 : 0.0)
-                        .disabled(!model.isEditable)
-                    }
-
-                    HighlightedText(
-                        text: row.rawText,
-                        query: model.activeSearchQuery,
-                        font: .caption.monospaced(),
-                        foregroundStyle: .secondary
-                    )
-                    .textSelection(.enabled)
+                    .font(PlainType.taskMeta)
                 }
+            } else {
+                // Priority badge
+                if let priority = row.priority {
+                    Text(priority)
+                        .font(PlainType.priorityBadge)
+                        .foregroundStyle(priorityColor(priority))
+                        .padding(.horizontal, Spacing.sm)
+                        .frame(height: Measurement.priorityBadgeHeight)
+                        .background(
+                            RoundedRectangle(cornerRadius: Radius.sm, style: .continuous)
+                                .fill(priorityBgColor(priority))
+                        )
+                }
+
+                // Task text with syntax highlighting
+                SyntaxHighlightedText(
+                    text: row.title,
+                    query: model.activeSearchQuery,
+                    strikethrough: row.isCompleted
+                )
+
+                Spacer()
+
+                // Due date label
+                if let dueLabel = row.dueLabel {
+                    Text(dueLabel)
+                        .font(PlainType.taskDueDate)
+                        .foregroundStyle(
+                            row.isOverdue ? PlainTokens.Status.overdue
+                            : row.isDueToday ? PlainTokens.Status.today
+                            : PlainTokens.TextToken.muted
+                        )
+                }
+
+                // Hover menu
+                Menu {
+                    Button("Edit") {
+                        startInlineEdit(for: row)
+                    }
+                    Divider()
+                    Button("Priority A") {
+                        model.setPriority("A", lineIdentity: row.id, undoManager: undoManager)
+                    }
+                    Button("Priority B") {
+                        model.setPriority("B", lineIdentity: row.id, undoManager: undoManager)
+                    }
+                    Button("Priority C") {
+                        model.setPriority("C", lineIdentity: row.id, undoManager: undoManager)
+                    }
+                    Button("Clear Priority") {
+                        model.setPriority(nil, lineIdentity: row.id, undoManager: undoManager)
+                    }
+                    Divider()
+                    Button("Delete", role: .destructive) {
+                        model.deleteRow(lineIdentity: row.id, undoManager: undoManager)
+                    }
+                    Divider()
+                    Button("Move Up") {
+                        model.moveRow(lineIdentity: row.id, by: -1, undoManager: undoManager)
+                    }
+                    .disabled(!model.canMove(lineIdentity: row.id, by: -1))
+                    Button("Move Down") {
+                        model.moveRow(lineIdentity: row.id, by: 1, undoManager: undoManager)
+                    }
+                    .disabled(!model.canMove(lineIdentity: row.id, by: 1))
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .foregroundStyle(PlainTokens.TextToken.secondary)
+                        .font(.system(size: 14))
+                }
+                .opacity(hoveredRowID == row.id ? Opacity.hoverMenu : 0.0)
+                .animation(.easeOut(duration: Anim.fast), value: hoveredRowID == row.id)
+                .disabled(!model.isEditable)
             }
         }
-        .padding(.vertical, 4)
+        .padding(.horizontal, Spacing.xl)
+        .frame(minHeight: Measurement.taskRowMinHeight)
         .onHover { isHovered in
             hoveredRowID = isHovered ? row.id : nil
+        }
+        .background {
+            if highlightedRowID == row.id {
+                Color.accentColor.opacity(0.08)
+            } else if hoveredRowID == row.id {
+                PlainTokens.Surface.hover
+            }
         }
         .contextMenu {
             Button(row.isCompleted ? "Mark Incomplete" : "Mark Complete") {
@@ -665,30 +698,44 @@ struct PlainShellView: View {
                 model.deleteRow(lineIdentity: row.id, undoManager: undoManager)
             }
         }
-        .opacity(row.isCompleted ? 0.5 : 1.0)
-        .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: row.isCompleted)
-        .background {
-            if highlightedRowID == row.id {
-                RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .fill(Color.accentColor.opacity(0.12))
-            }
-        }
+        .opacity(row.isCompleted ? Opacity.completedRow : 1.0)
+        .animation(reduceMotion ? nil : .easeInOut(duration: Anim.normal), value: row.isCompleted)
         .overlay(alignment: .leading) {
             if model.selectedRowIDs.contains(row.id) {
-                RoundedRectangle(cornerRadius: 1)
-                    .fill(Color.accentColor)
-                    .frame(width: 2)
-                    .padding(.vertical, 2)
+                Rectangle()
+                    .fill(PlainTokens.Selection.bar)
+                    .frame(width: Measurement.selectionBarWidth)
             }
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel(taskRowAccessibilityLabel(row))
         .overlay(alignment: .bottom) {
             Rectangle()
-                .fill(Color.primary.opacity(0.06))
-                .frame(height: 0.5)
+                .fill(PlainTokens.Border.row)
+                .frame(height: Measurement.rowSeparatorThickness)
+                .padding(.leading, Spacing.xl + Measurement.completionCircleDiameter + Spacing.sm)
         }
         .tag(row.id)
+    }
+
+    private func completionCircle(row: PlainShellModel.Row) -> some View {
+        ZStack {
+            if row.isCompleted {
+                Circle()
+                    .fill(PlainTokens.Status.completed)
+                    .frame(width: Measurement.completionCircleDiameter, height: Measurement.completionCircleDiameter)
+                Image(systemName: "checkmark")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(PlainTokens.TextToken.inverse)
+            } else {
+                Circle()
+                    .stroke(
+                        row.priority != nil ? priorityColor(row.priority!) : PlainTokens.TextToken.muted,
+                        lineWidth: 1.5
+                    )
+                    .frame(width: Measurement.completionCircleDiameter, height: Measurement.completionCircleDiameter)
+            }
+        }
     }
 
     private var archiveDetailView: some View {
@@ -719,45 +766,45 @@ struct PlainShellView: View {
             }
 
             List(model.visibleRows) { row in
-                HStack {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundStyle(.secondary)
+                HStack(spacing: Spacing.sm) {
+                    ZStack {
+                        Circle()
+                            .fill(PlainTokens.Status.completed)
+                            .frame(width: Measurement.completionCircleDiameter, height: Measurement.completionCircleDiameter)
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(PlainTokens.TextToken.inverse)
+                    }
 
-                    VStack(alignment: .leading, spacing: 6) {
-                        HStack(alignment: .firstTextBaseline, spacing: 8) {
-                            if let priority = row.priority {
-                                Text("(\(priority))")
-                                    .font(.callout.weight(.semibold))
-                                    .foregroundStyle(priorityColor(priority))
-                            }
-
-                            SyntaxHighlightedText(
-                                text: row.title,
-                                query: model.activeSearchQuery,
-                                strikethrough: true
+                    if let priority = row.priority {
+                        Text(priority)
+                            .font(PlainType.priorityBadge)
+                            .foregroundStyle(priorityColor(priority))
+                            .padding(.horizontal, Spacing.sm)
+                            .frame(height: Measurement.priorityBadgeHeight)
+                            .background(
+                                RoundedRectangle(cornerRadius: Radius.sm, style: .continuous)
+                                    .fill(priorityBgColor(priority))
                             )
+                    }
 
-                            Spacer()
+                    SyntaxHighlightedText(
+                        text: row.title,
+                        query: model.activeSearchQuery,
+                        strikethrough: true
+                    )
 
-                            if let dueLabel = row.dueLabel {
-                                Text(dueLabel)
-                                    .font(.caption.weight(.medium))
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
+                    Spacer()
 
-                        HighlightedText(
-                            text: row.rawText,
-                            query: model.activeSearchQuery,
-                            font: .caption.monospaced(),
-                            foregroundStyle: .secondary,
-                            strikethrough: true
-                        )
-                        .textSelection(.enabled)
+                    if let dueLabel = row.dueLabel {
+                        Text(dueLabel)
+                            .font(PlainType.taskDueDate)
+                            .foregroundStyle(PlainTokens.TextToken.muted)
                     }
                 }
-                .padding(.vertical, 4)
-                .opacity(0.7)
+                .padding(.horizontal, Spacing.xl)
+                .frame(minHeight: Measurement.taskRowMinHeight)
+                .opacity(Opacity.completedRow)
             }
             .listStyle(.inset)
             .accessibilityIdentifier("plain.done.list")
@@ -780,13 +827,17 @@ struct PlainShellView: View {
 
             HStack {
                 Text(model.archiveStatusText)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(PlainType.statusBar)
+                    .foregroundStyle(PlainTokens.TextToken.muted)
                 Spacer()
             }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 12)
-            .background(Color(nsColor: .windowBackgroundColor))
+            .padding(.horizontal, Spacing.xl)
+            .frame(height: Measurement.statusBarHeight)
+            .overlay(alignment: .top) {
+                Rectangle()
+                    .fill(PlainTokens.Border.row)
+                    .frame(height: Measurement.rowSeparatorThickness)
+            }
         }
     }
 
@@ -812,13 +863,13 @@ struct PlainShellView: View {
                 }
                 .disabled(!model.isEditable)
             }
-            .padding(.horizontal, 20)
-            .padding(.top, 20)
+            .padding(.horizontal, Spacing.xl)
+            .padding(.top, Spacing.xl)
 
             if model.hasExternalTodoConflict {
                 conflictBanner
-                    .padding(.horizontal, 20)
-                    .padding(.top, 12)
+                    .padding(.horizontal, Spacing.xl)
+                    .padding(.top, Spacing.lg)
             }
 
             if let transientError = model.transientError {
@@ -848,29 +899,47 @@ struct PlainShellView: View {
     }
 
     private var conflictBanner: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: Spacing.lg) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundStyle(PlainTokens.Status.conflict)
+                .font(.system(size: 14))
+
             Text(model.externalTodoConflictMessage)
-                .font(.subheadline)
+                .font(PlainType.taskBody)
+                .foregroundStyle(PlainTokens.TextToken.primary)
 
             Spacer()
 
-            Button("Reload") {
-                model.reloadAfterConflict()
-            }
+            HStack(spacing: Spacing.sm) {
+                Button("Reload") {
+                    model.reloadAfterConflict()
+                }
+                .font(PlainType.taskMeta)
 
-            Button("Keep Mine") {
-                model.keepMineAfterConflict()
-            }
+                Text("|")
+                    .foregroundStyle(PlainTokens.TextToken.muted)
+                    .font(PlainType.taskMeta)
 
-            Button("View Diff") {
-                model.presentConflictDiff()
+                Button("Keep Mine") {
+                    model.keepMineAfterConflict()
+                }
+                .font(PlainType.taskMeta)
+
+                Text("|")
+                    .foregroundStyle(PlainTokens.TextToken.muted)
+                    .font(PlainType.taskMeta)
+
+                Button("View Diff") {
+                    model.presentConflictDiff()
+                }
+                .font(PlainType.taskMeta)
+                .accessibilityIdentifier("plain.conflict.viewDiff")
             }
-            .accessibilityIdentifier("plain.conflict.viewDiff")
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
-        .background(Color(nsColor: .controlBackgroundColor))
-        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .padding(.horizontal, Spacing.xl)
+        .padding(.vertical, Spacing.md)
+        .background(PlainTokens.Status.conflict.opacity(0.10))
+        .clipShape(RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
         .accessibilityIdentifier("plain.conflict.banner")
     }
 
@@ -1305,10 +1374,19 @@ private struct HighlightedText: View {
 
 private func priorityColor(_ priority: String) -> Color {
     switch priority {
-    case "A": return .red
-    case "B": return .orange
-    case "C": return .blue
-    default: return .secondary
+    case "A": return PlainTokens.Priority.a
+    case "B": return PlainTokens.Priority.b
+    case "C": return PlainTokens.Priority.c
+    default: return PlainTokens.Priority.low
+    }
+}
+
+private func priorityBgColor(_ priority: String) -> Color {
+    switch priority {
+    case "A": return PlainTokens.Priority.aBg
+    case "B": return PlainTokens.Priority.bBg
+    case "C": return PlainTokens.Priority.cBg
+    default: return PlainTokens.Priority.lowBg
     }
 }
 
@@ -1347,37 +1425,38 @@ private struct SyntaxHighlightedText: View {
     private func coloredAttributedString(_ segment: String) -> AttributedString {
         var result = AttributedString()
         let words = segment.split(separator: " ", omittingEmptySubsequences: false)
-        let baseFont = Font.system(size: fontSize)
-        let mediumFont = Font.system(size: fontSize, weight: .medium)
+        let baseFont = PlainType.taskBody(size: fontSize)
+        let tagsFont = PlainType.taskTags(size: fontSize)
+        let metaFont = PlainType.taskMeta
 
         for (i, word) in words.enumerated() {
             if i > 0 {
                 var space = AttributedString(" ")
                 space.font = baseFont
-                space.foregroundColor = .primary
+                space.foregroundColor = PlainTokens.TextToken.primary
                 result.append(space)
             }
 
             let w = String(word)
             if w.hasPrefix("+") && w.count > 1 {
                 var attr = AttributedString(w)
-                attr.font = mediumFont
-                attr.foregroundColor = .teal
+                attr.font = tagsFont
+                attr.foregroundColor = PlainTokens.Syntax.project
                 result.append(attr)
             } else if w.hasPrefix("@") && w.count > 1 {
                 var attr = AttributedString(w)
-                attr.font = mediumFont
-                attr.foregroundColor = .purple
+                attr.font = tagsFont
+                attr.foregroundColor = PlainTokens.Syntax.context
                 result.append(attr)
             } else if w.contains(":") && !w.hasPrefix(":") && !w.hasSuffix(":") && w.count > 2 {
                 var attr = AttributedString(w)
-                attr.font = baseFont
-                attr.foregroundColor = .secondary
+                attr.font = metaFont
+                attr.foregroundColor = PlainTokens.Syntax.keyValue
                 result.append(attr)
             } else {
                 var attr = AttributedString(w)
                 attr.font = baseFont
-                attr.foregroundColor = .primary
+                attr.foregroundColor = PlainTokens.TextToken.primary
                 result.append(attr)
             }
         }
@@ -1400,14 +1479,16 @@ private struct GroupHeader: View {
     let title: String
 
     var body: some View {
-        HStack(spacing: 8) {
-            Text(title)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
+        HStack(spacing: Spacing.md) {
+            Text(title.uppercased())
+                .font(PlainType.groupHeader)
+                .tracking(Tracking.groupHeader)
+                .foregroundStyle(PlainTokens.TextToken.secondary)
             Rectangle()
-                .fill(Color.secondary.opacity(0.2))
-                .frame(height: 1)
+                .fill(PlainTokens.Border.row)
+                .frame(height: Measurement.rowSeparatorThickness)
         }
+        .frame(height: Measurement.groupHeaderHeight)
         .textCase(nil)
     }
 }
@@ -1455,17 +1536,36 @@ private struct PlaceholderCard: View {
     }
 }
 
+private struct SidebarSectionHeader: View {
+    let text: String
+
+    init(_ text: String) {
+        self.text = text
+    }
+
+    var body: some View {
+        Text(text)
+            .font(PlainType.sidebarSection)
+            .tracking(Tracking.sidebarSection)
+            .foregroundStyle(PlainTokens.TextToken.muted)
+    }
+}
+
 private struct SidebarRow: View {
     let title: String
     let count: Int
+    var isOverdue = false
 
     var body: some View {
         HStack {
             Text(title)
+                .font(PlainType.sidebarLabel)
             Spacer()
             Text("\(count)")
-                .foregroundStyle(.secondary)
+                .font(PlainType.sidebarCount)
+                .foregroundStyle(isOverdue ? PlainTokens.Status.overdue : PlainTokens.TextToken.muted)
         }
+        .frame(height: Measurement.sidebarItemHeight)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(title), \(count) tasks")
     }
@@ -1541,6 +1641,8 @@ final class PlainShellModel: ObservableObject {
         let isOverdue: Bool
         /// 0 = overdue, 1 = today, 2 = upcoming, 3 = none
         let dueBucketRank: Int
+
+        var isDueToday: Bool { dueBucketRank == 1 }
     }
 
     struct RowGroup: Identifiable {

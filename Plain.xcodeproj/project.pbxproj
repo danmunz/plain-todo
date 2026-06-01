@@ -40,6 +40,7 @@
 		BED3890ADC573A574947D28F /* TodoSerializer.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0E190EF4603D5AD3528E1A7 /* TodoSerializer.swift */; };
 		CF623C887725732752705241 /* SessionRestoreStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D24B5F77A61C59156CA864A4 /* SessionRestoreStore.swift */; };
 		CFE2790ED0C792C6EB3E4D0A /* CoordinatedTodoStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 977C67E1763A75558845983E /* CoordinatedTodoStoreTests.swift */; };
+		D31440120324C7D24EC01C45 /* DesignTokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30FE67C41A5942A448483F64 /* DesignTokens.swift */; };
 		D34417B3AF823E32AC16B81A /* QuickAddPanelController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7ED98B2DC5394AD5F61C6E04 /* QuickAddPanelController.swift */; };
 		E0C841D4C17598ED93261B83 /* PlainWidgetSnapshotStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A650051833ACF5C47D0E8A89 /* PlainWidgetSnapshotStoreTests.swift */; };
 		E112BAC2A82F951091555916 /* ParserPerformanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8F327AF68D9BF6DDB3CDE73 /* ParserPerformanceTests.swift */; };
@@ -137,6 +138,7 @@
 		2562428BF4C9E1273C67F909 /* PlainCoreTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PlainCoreTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		2AB15A3803A8B5693E9C7369 /* PlainShellModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlainShellModelTests.swift; sourceTree = "<group>"; };
 		2B18B8B791E6CB58F9E64430 /* PlainWidgetBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlainWidgetBundle.swift; sourceTree = "<group>"; };
+		30FE67C41A5942A448483F64 /* DesignTokens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignTokens.swift; sourceTree = "<group>"; };
 		333D1A800A033D0570B63BA1 /* PlainWidgetSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlainWidgetSnapshot.swift; sourceTree = "<group>"; };
 		365E9D42C7E0863B5E2809A5 /* TodoParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodoParser.swift; sourceTree = "<group>"; };
 		374BEC8118DDB9E142FF11EC /* TodoParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodoParserTests.swift; sourceTree = "<group>"; };
@@ -205,6 +207,7 @@
 			isa = PBXGroup;
 			children = (
 				5CE5628E209438C7082CBF9C /* DeepLinkRoute.swift */,
+				30FE67C41A5942A448483F64 /* DesignTokens.swift */,
 				799FA40D305345E972A46620 /* Info.plist */,
 				E58B1E68A47F8EE5DCDAC28D /* MenuBarContentView.swift */,
 				9074C8EDC17EAC36F9AF7CD9 /* PlainApp.swift */,
@@ -511,6 +514,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				583B8B9D745409F8F7E3F2E0 /* DeepLinkRoute.swift in Sources */,
+				D31440120324C7D24EC01C45 /* DesignTokens.swift in Sources */,
 				081886006D513776ACD95147 /* MenuBarContentView.swift in Sources */,
 				8D3699BD63DC4CAEC95A7B94 /* PlainApp.swift in Sources */,
 				F5D5F06AD52F322B99E97E44 /* PlainAppScenes.swift in Sources */,
