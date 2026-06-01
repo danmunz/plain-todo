@@ -487,7 +487,24 @@ struct PlainShellView: View {
             }
             .overlay(alignment: .topTrailing) {
                 if isDueDatePickerPresented {
-                    VStack(spacing: Spacing.md) {
+                    VStack(spacing: 0) {
+                        HStack {
+                            Text("Due Date")
+                                .font(PlainType.sidebarLabel)
+                                .foregroundStyle(PlainTokens.TextToken.primary)
+                            Spacer()
+                            Button {
+                                isDueDatePickerPresented = false
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundStyle(PlainTokens.TextToken.muted)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        .padding(.horizontal, Spacing.lg)
+                        .padding(.top, Spacing.lg)
+                        .padding(.bottom, Spacing.sm)
+
                         DatePicker(
                             "Due date",
                             selection: $dueDatePickerValue,
@@ -495,14 +512,25 @@ struct PlainShellView: View {
                         )
                         .datePickerStyle(.graphical)
                         .labelsHidden()
-                        .frame(width: 260, height: 280)
+                        .padding(.horizontal, Spacing.sm)
 
-                        HStack {
-                            Button("Cancel") {
-                                isDueDatePickerPresented = false
+                        Divider()
+                            .padding(.horizontal, Spacing.lg)
+
+                        HStack(spacing: Spacing.md) {
+                            Button("Today") {
+                                insertDueDate(Date())
                             }
                             .buttonStyle(.plain)
-                            .foregroundStyle(PlainTokens.TextToken.muted)
+                            .font(PlainType.taskMeta)
+                            .foregroundStyle(PlainTokens.Syntax.context)
+
+                            Button("Tomorrow") {
+                                insertDueDate(Calendar.current.date(byAdding: .day, value: 1, to: Date()) ?? Date())
+                            }
+                            .buttonStyle(.plain)
+                            .font(PlainType.taskMeta)
+                            .foregroundStyle(PlainTokens.Syntax.context)
 
                             Spacer()
 
@@ -510,23 +538,26 @@ struct PlainShellView: View {
                                 insertDueDate(dueDatePickerValue)
                             }
                             .buttonStyle(.borderedProminent)
+                            .controlSize(.small)
                         }
+                        .padding(.horizontal, Spacing.lg)
+                        .padding(.vertical, Spacing.md)
                     }
-                    .padding(Spacing.lg)
-                    .background(PlainTokens.Surface.input)
-                    .clipShape(RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
+                    .background(.regularMaterial)
+                    .clipShape(RoundedRectangle(cornerRadius: Radius.lg, style: .continuous))
                     .overlay(
-                        RoundedRectangle(cornerRadius: Radius.md, style: .continuous)
-                            .stroke(PlainTokens.Border.input, lineWidth: 1)
+                        RoundedRectangle(cornerRadius: Radius.lg, style: .continuous)
+                            .stroke(PlainTokens.Border.input, lineWidth: 0.5)
                     )
-                    .shadow(color: Color.black.opacity(0.1), radius: 6, x: 0, y: 3)
-                    .frame(width: 290)
+                    .shadow(color: Color.black.opacity(0.15), radius: 12, x: 0, y: 4)
+                    .frame(width: 280)
                     .offset(y: Measurement.inputBarHeight + 4)
                     .zIndex(100)
                 }
             }
             .padding(.horizontal, Spacing.xl)
             .padding(.top, Spacing.xl)
+            .zIndex(1)
 
             if let addTaskPreview {
                 HStack(spacing: Spacing.sm) {
@@ -1276,7 +1307,7 @@ struct PlainShellView: View {
                 guard focusedField == nil else { return }
                 model.selectedRowIDs = Set(model.visibleRows.map(\.id))
             }
-            .keyboardShortcut("a")
+            .keyboardShortcut("a", modifiers: [.command, .shift])
 
             Button("Extend Selection Down") {
                 guard focusedField == nil, editingRowID == nil else { return }
