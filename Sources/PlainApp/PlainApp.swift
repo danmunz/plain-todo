@@ -413,11 +413,18 @@ struct PlainShellView: View {
 
                 if newTaskText.isEmpty && focusedField != .newTask {
                     Text("⌘N")
-                        .font(PlainType.inputHint)
+                        .font(.system(size: 10, weight: .medium, design: .monospaced))
                         .foregroundStyle(PlainTokens.TextToken.muted)
-                        .padding(.horizontal, Spacing.sm)
+                        .padding(.horizontal, Spacing.sm + 1)
                         .padding(.vertical, Spacing.xs)
-                        .background(RoundedRectangle(cornerRadius: Radius.sm, style: .continuous).fill(PlainTokens.Surface.input))
+                        .background(
+                            RoundedRectangle(cornerRadius: 3, style: .continuous)
+                                .fill(PlainTokens.Surface.hover)
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 3, style: .continuous)
+                                .stroke(PlainTokens.Border.row, lineWidth: 0.5)
+                        )
                 }
 
                 if !newTaskText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -792,13 +799,21 @@ struct PlainShellView: View {
 
                 // Due date label
                 if let dueLabel = row.dueLabel {
-                    Text(dueLabel)
-                        .font(row.isOverdue || row.isDueToday ? PlainType.taskDueDateUrgent : PlainType.taskDueDate)
-                        .foregroundStyle(
-                            row.isOverdue ? PlainTokens.Status.overdue
-                            : row.isDueToday ? PlainTokens.Status.today
-                            : PlainTokens.TextToken.muted
-                        )
+                    if row.isOverdue {
+                        Text(dueLabel)
+                            .font(PlainType.taskDueDateUrgent)
+                            .foregroundStyle(PlainTokens.TextToken.inverse)
+                            .padding(.horizontal, Spacing.sm + 1)
+                            .padding(.vertical, 1)
+                            .background(PlainTokens.Status.overdue, in: Capsule())
+                    } else {
+                        Text(dueLabel)
+                            .font(row.isDueToday ? PlainType.taskDueDateUrgent : PlainType.taskDueDate)
+                            .foregroundStyle(
+                                row.isDueToday ? PlainTokens.Status.today
+                                : PlainTokens.TextToken.muted
+                            )
+                    }
                 }
 
                 // Hover menu
@@ -930,12 +945,18 @@ struct PlainShellView: View {
             HStack(alignment: .firstTextBaseline) {
                 VStack(alignment: .leading, spacing: Spacing.sm) {
                     Text("ARCHIVE")
-                        .font(PlainType.sidebarSection)
+                        .font(PlainType.groupHeader)
                         .tracking(Tracking.sidebarSection)
                         .foregroundStyle(PlainTokens.Syntax.project)
                     Text(model.archiveDescription)
                         .font(PlainType.taskMeta)
                         .foregroundStyle(PlainTokens.TextToken.muted)
+                }
+                .padding(.leading, Spacing.md)
+                .overlay(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 1, style: .continuous)
+                        .fill(PlainTokens.Syntax.project)
+                        .frame(width: 2)
                 }
 
                 Spacer()
@@ -1037,13 +1058,19 @@ struct PlainShellView: View {
             HStack(alignment: .firstTextBaseline) {
                 VStack(alignment: .leading, spacing: Spacing.sm) {
                     Text("SCRATCH PAD")
-                        .font(PlainType.sidebarSection)
+                        .font(PlainType.groupHeader)
                         .tracking(Tracking.sidebarSection)
                         .foregroundStyle(PlainTokens.Syntax.project)
 
                     Text("Edit the full todo.txt directly. Save reparses and writes through the coordinated store.")
                         .font(PlainType.taskMeta)
                         .foregroundStyle(PlainTokens.TextToken.muted)
+                }
+                .padding(.leading, Spacing.md)
+                .overlay(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 1, style: .continuous)
+                        .fill(PlainTokens.Syntax.project)
+                        .frame(width: 2)
                 }
 
                 Spacer()
@@ -1110,29 +1137,32 @@ struct PlainShellView: View {
 
             Spacer()
 
-            HStack(spacing: Spacing.sm) {
+            HStack(spacing: Spacing.md) {
                 Button("Reload") {
                     model.reloadAfterConflict()
                 }
                 .font(PlainType.taskMeta)
-
-                Text("|")
-                    .foregroundStyle(PlainTokens.TextToken.muted)
-                    .font(PlainType.taskMeta)
+                .buttonStyle(.plain)
+                .foregroundStyle(PlainTokens.TextToken.secondary)
 
                 Button("Keep Mine") {
                     model.keepMineAfterConflict()
                 }
                 .font(PlainType.taskMeta)
+                .buttonStyle(.plain)
+                .foregroundStyle(PlainTokens.TextToken.secondary)
 
-                Text("|")
-                    .foregroundStyle(PlainTokens.TextToken.muted)
-                    .font(PlainType.taskMeta)
-
-                Button("View Diff") {
+                Button {
                     model.presentConflictDiff()
+                } label: {
+                    Text("View Diff")
+                        .font(PlainType.taskMeta)
+                        .foregroundStyle(PlainTokens.TextToken.inverse)
+                        .padding(.horizontal, Spacing.md)
+                        .padding(.vertical, Spacing.xs + 1)
+                        .background(PlainTokens.Status.conflict, in: RoundedRectangle(cornerRadius: Radius.sm, style: .continuous))
                 }
-                .font(PlainType.taskMeta)
+                .buttonStyle(.plain)
                 .accessibilityIdentifier("plain.conflict.viewDiff")
             }
         }
@@ -1337,7 +1367,7 @@ struct PlainShellView: View {
     private var searchOverlay: some View {
         HStack(spacing: Spacing.lg) {
             Image(systemName: "magnifyingglass")
-                .foregroundStyle(PlainTokens.TextToken.muted)
+                .foregroundStyle(PlainTokens.Syntax.project)
                 .font(PlainType.iconLarge)
 
             TextField("Search tasks", text: $searchText)
@@ -1356,6 +1386,20 @@ struct PlainShellView: View {
                         .foregroundStyle(PlainTokens.TextToken.muted)
                 }
                 .buttonStyle(.plain)
+            } else {
+                Text("esc")
+                    .font(.system(size: 10, weight: .medium, design: .monospaced))
+                    .foregroundStyle(PlainTokens.TextToken.muted)
+                    .padding(.horizontal, Spacing.sm + 1)
+                    .padding(.vertical, Spacing.xs)
+                    .background(
+                        RoundedRectangle(cornerRadius: 3, style: .continuous)
+                            .fill(PlainTokens.Surface.hover)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 3, style: .continuous)
+                            .stroke(PlainTokens.Border.row, lineWidth: 0.5)
+                    )
             }
         }
         .padding(.horizontal, Spacing.xl)

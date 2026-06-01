@@ -197,22 +197,35 @@ private struct QuickAddPanelView: View {
             HStack(alignment: .firstTextBaseline) {
                 VStack(alignment: .leading, spacing: Spacing.xs) {
                     Text("QUICK ADD")
-                        .font(PlainType.sidebarSection)
+                        .font(PlainType.groupHeader)
                         .tracking(Tracking.sidebarSection)
                         .foregroundStyle(PlainTokens.Syntax.project)
                     Text(controller.destinationDescription)
                         .font(PlainType.taskMeta)
                         .foregroundStyle(PlainTokens.TextToken.muted)
                 }
+                .padding(.leading, Spacing.md)
+                .overlay(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 1, style: .continuous)
+                        .fill(PlainTokens.Syntax.project)
+                        .frame(width: 2)
+                }
 
                 Spacer()
 
                 Text("Ctrl+Opt+T")
-                    .font(PlainType.inputHint)
+                    .font(.system(size: 10, weight: .medium, design: .monospaced))
                     .foregroundStyle(PlainTokens.TextToken.muted)
-                    .padding(.horizontal, Spacing.sm)
+                    .padding(.horizontal, Spacing.sm + 1)
                     .padding(.vertical, Spacing.xs)
-                    .background(RoundedRectangle(cornerRadius: Radius.sm, style: .continuous).fill(PlainTokens.Surface.hover))
+                    .background(
+                        RoundedRectangle(cornerRadius: 3, style: .continuous)
+                            .fill(PlainTokens.Surface.hover)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 3, style: .continuous)
+                            .stroke(PlainTokens.Border.row, lineWidth: 0.5)
+                    )
             }
 
             TextField("Capture a task...", text: $controller.inputText)
