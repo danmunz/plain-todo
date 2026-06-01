@@ -98,44 +98,48 @@ enum PlainTokens {
 // MARK: - Typography Tokens
 
 enum PlainType {
+    // -- App chrome (sans-serif) --
     static let windowTitle = Font.system(size: 13, weight: .semibold)
     static let sidebarSection = Font.system(size: 10, weight: .heavy)
     static let sidebarLabel = Font.system(size: 13, weight: .medium)
     static let sidebarCount = Font.system(size: 12, weight: .regular)
     static let groupHeader = Font.system(size: 10, weight: .heavy)
-    static let taskBody = Font.system(size: 14, weight: .regular)
-    static let taskTags = Font.system(size: 14, weight: .semibold)
-    static let taskMeta = Font.system(size: 12, weight: .regular)
-    static let taskDueDate = Font.system(size: 11, weight: .semibold)
     static let priorityBadge = Font.system(size: 11, weight: .bold)
-    static let inputBar = Font.system(size: 14, weight: .regular)
-    static let inputPlaceholder = Font.system(size: 14, weight: .regular).italic()
     static let inputHint = Font.system(size: 11, weight: .regular)
     static let statusBar = Font.system(size: 11, weight: .regular)
     static let scratchPad = Font.system(size: 13, design: .monospaced)
-    static let toastMessage = Font.system(size: 12, weight: .medium)
-    static let emptyState = Font.system(size: 14, weight: .regular)
-    static let onboardingHeading = Font.system(size: 24, weight: .semibold)
-    static let onboardingBody = Font.system(size: 14, weight: .regular)
+    static let taskMeta = Font.system(size: 12, weight: .regular)
+
+    // -- Content (serif — New York) --
+    static let taskBody = Font.system(size: 14, weight: .regular, design: .serif)
+    static let taskTags = Font.system(size: 14, weight: .semibold, design: .serif)
+    static let taskDueDate = Font.system(size: 11, weight: .medium, design: .serif)
+    static let taskDueDateUrgent = Font.system(size: 11, weight: .medium, design: .serif).italic()
+    static let inputBar = Font.system(size: 14, weight: .regular, design: .serif)
+    static let inputPlaceholder = Font.system(size: 14, weight: .regular, design: .serif).italic()
+    static let toastMessage = Font.system(size: 12, weight: .medium, design: .serif).italic()
+    static let emptyState = Font.system(size: 15, weight: .regular, design: .serif).italic()
+    static let onboardingHeading = Font.system(size: 32, weight: .regular, design: .serif)
+    static let onboardingBody = Font.system(size: 14, weight: .regular, design: .serif)
 
     /// Returns a scaled taskBody font at the user's chosen size.
     static func taskBody(size: Double) -> Font {
-        .system(size: size, weight: .regular)
+        .system(size: size, weight: .regular, design: .serif)
     }
 
     /// Returns a scaled taskTags font at the user's chosen size.
     static func taskTags(size: Double) -> Font {
-        .system(size: size, weight: .semibold)
+        .system(size: size, weight: .semibold, design: .serif)
     }
 
     /// Returns a scaled inputBar font at the user's chosen size.
     static func inputBar(size: Double) -> Font {
-        .system(size: size, weight: .regular)
+        .system(size: size, weight: .regular, design: .serif)
     }
 
     /// Returns a scaled emptyState font at the user's chosen size.
     static func emptyState(size: Double) -> Font {
-        .system(size: size, weight: .regular)
+        .system(size: size, weight: .regular, design: .serif).italic()
     }
 }
 

@@ -273,12 +273,12 @@ struct PlainShellView: View {
 
             VStack(spacing: Spacing.lg) {
                 Text("plain")
-                    .font(.system(size: 36, weight: .medium, design: .default))
+                    .font(PlainType.onboardingHeading)
                     .tracking(Tracking.onboardingHeading)
                     .foregroundStyle(PlainTokens.TextToken.primary)
 
                 Text("A todo.txt client for macOS.\nReads your file. That's it, really.")
-                    .font(PlainType.emptyState)
+                    .font(PlainType.onboardingBody)
                     .foregroundStyle(PlainTokens.TextToken.secondary)
                     .multilineTextAlignment(.center)
                     .lineSpacing(4)
@@ -653,7 +653,7 @@ struct PlainShellView: View {
                 // Due date label
                 if let dueLabel = row.dueLabel {
                     Text(dueLabel)
-                        .font(PlainType.taskDueDate)
+                        .font(row.isOverdue || row.isDueToday ? PlainType.taskDueDateUrgent : PlainType.taskDueDate)
                         .foregroundStyle(
                             row.isOverdue ? PlainTokens.Status.overdue
                             : row.isDueToday ? PlainTokens.Status.today
@@ -1494,6 +1494,7 @@ private struct SyntaxHighlightedText: View {
     private func styledText(_ segment: String, highlighted: Bool = false) -> some View {
         Text(coloredAttributedString(segment))
             .strikethrough(strikethrough)
+            .italic(strikethrough)
             .padding(.horizontal, highlighted ? 2 : 0)
             .background(highlighted ? Color.yellow.opacity(0.28) : Color.clear)
             .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
