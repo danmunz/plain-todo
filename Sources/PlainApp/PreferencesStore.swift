@@ -201,7 +201,7 @@ private struct GeneralPreferencesTab: View {
             LabeledContent("todo.txt file") {
                 HStack {
                     Text(currentFilePath)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(PlainTokens.TextToken.muted)
                         .lineLimit(1)
                         .truncationMode(.middle)
                         .help(currentFilePath)
@@ -318,7 +318,7 @@ private struct AdvancedPreferencesTab: View {
         Form {
             LabeledContent("File encoding") {
                 Text("UTF-8")
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(PlainTokens.TextToken.muted)
             }
 
             Toggle("Create .bak backup before writing", isOn: $preferences.createBackup)

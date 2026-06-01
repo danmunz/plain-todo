@@ -5,13 +5,13 @@ struct MenuBarContentView: View {
     @ObservedObject var quickAddController: QuickAddPanelController
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: Spacing.lg) {
+            VStack(alignment: .leading, spacing: Spacing.sm) {
                 Text("Plain")
-                    .font(.headline)
+                    .font(PlainType.sidebarLabel)
                 Text(model.sourceDescription)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(PlainType.taskMeta)
+                    .foregroundStyle(PlainTokens.TextToken.muted)
             }
 
             Divider()
@@ -66,7 +66,7 @@ struct MenuBarContentView: View {
             Text(title)
             Spacer()
             Text("\(count)")
-                .foregroundStyle(.secondary)
+                .foregroundStyle(PlainTokens.TextToken.muted)
         }
         .contentShape(Rectangle())
     }
