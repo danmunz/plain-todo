@@ -63,8 +63,11 @@ struct PlainShellView: View {
     @State private var scratchPadText = ""
     @State private var highlightedRowID: LineIdentity?
     @State private var completingRowID: LineIdentity?
-    @State private var contextSuggestions: [String] = []
-    @State private var contextSuggestionIndex: Int = 0
+    @State private var autocompleteSuggestions: [String] = []
+    @State private var autocompleteIndex: Int = 0
+    @State private var autocompletePrefix: Character?  // '@' or '+'
+    @State private var isDueDatePickerPresented = false
+    @State private var dueDatePickerValue = Date()
     @State private var columnVisibility: NavigationSplitViewVisibility = {
         if UserDefaults.standard.bool(forKey: "PlainSidebarCollapsed") {
             return .detailOnly
@@ -372,33 +375,37 @@ struct PlainShellView: View {
                     .accessibilityLabel("Add a task")
                     .accessibilityHint("Type a task and press Return to add it")
                     .onSubmit {
-                        if !contextSuggestions.isEmpty {
-                            acceptContextSuggestion(contextSuggestions[contextSuggestionIndex])
+                        if !autocompleteSuggestions.isEmpty {
+                            acceptAutocompleteSuggestion(autocompleteSuggestions[autocompleteIndex])
                         } else {
                             submitNewTask()
                         }
                     }
                     .onChange(of: newTaskText) { _, newValue in
-                        updateContextSuggestions(for: newValue)
+                        updateAutocompleteSuggestions(for: newValue)
                     }
                     .onKeyPress(.upArrow) {
-                        guard !contextSuggestions.isEmpty else { return .ignored }
-                        contextSuggestionIndex = max(0, contextSuggestionIndex - 1)
+                        guard !autocompleteSuggestions.isEmpty else { return .ignored }
+                        autocompleteIndex = max(0, autocompleteIndex - 1)
                         return .handled
                     }
                     .onKeyPress(.downArrow) {
-                        guard !contextSuggestions.isEmpty else { return .ignored }
-                        contextSuggestionIndex = min(contextSuggestions.count - 1, contextSuggestionIndex + 1)
+                        guard !autocompleteSuggestions.isEmpty else { return .ignored }
+                        autocompleteIndex = min(autocompleteSuggestions.count - 1, autocompleteIndex + 1)
                         return .handled
                     }
                     .onKeyPress(.tab) {
-                        guard !contextSuggestions.isEmpty else { return .ignored }
-                        acceptContextSuggestion(contextSuggestions[contextSuggestionIndex])
+                        guard !autocompleteSuggestions.isEmpty else { return .ignored }
+                        acceptAutocompleteSuggestion(autocompleteSuggestions[autocompleteIndex])
                         return .handled
                     }
                     .onKeyPress(.escape) {
-                        guard !contextSuggestions.isEmpty else { return .ignored }
-                        contextSuggestions = []
+                        if isDueDatePickerPresented {
+                            isDueDatePickerPresented = false
+                            return .handled
+                        }
+                        guard !autocompleteSuggestions.isEmpty else { return .ignored }
+                        autocompleteSuggestions = []
                         return .handled
                     }
 
@@ -437,18 +444,20 @@ struct PlainShellView: View {
             .clipShape(RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
             .shadow(color: Color.black.opacity(0.06), radius: 3, x: 0, y: 1)
             .overlay(alignment: .topLeading) {
-                if !contextSuggestions.isEmpty {
+                if !autocompleteSuggestions.isEmpty {
+                    let prefix = autocompletePrefix.map(String.init) ?? ""
+                    let syntaxColor = autocompletePrefix == "+" ? PlainTokens.Syntax.project : PlainTokens.Syntax.context
                     VStack(alignment: .leading, spacing: 0) {
-                        ForEach(Array(contextSuggestions.enumerated()), id: \.offset) { index, suggestion in
+                        ForEach(Array(autocompleteSuggestions.enumerated()), id: \.offset) { index, suggestion in
                             Button {
-                                acceptContextSuggestion(suggestion)
+                                acceptAutocompleteSuggestion(suggestion)
                             } label: {
                                 HStack {
-                                    Text("@\(suggestion)")
+                                    Text("\(prefix)\(suggestion)")
                                         .font(PlainType.taskBody)
-                                        .foregroundStyle(PlainTokens.Syntax.context)
+                                        .foregroundStyle(syntaxColor)
                                     Spacer()
-                                    if index < 3 && isRecentContext(suggestion) {
+                                    if index < 3 && isRecentTag(suggestion, prefix: autocompletePrefix) {
                                         Text("recent")
                                             .font(PlainType.taskMeta)
                                             .foregroundStyle(PlainTokens.TextToken.muted)
@@ -456,10 +465,10 @@ struct PlainShellView: View {
                                 }
                                 .padding(.horizontal, Spacing.lg)
                                 .padding(.vertical, Spacing.md)
-                                .background(index == contextSuggestionIndex ? PlainTokens.Surface.hover : Color.clear)
+                                .background(index == autocompleteIndex ? PlainTokens.Surface.hover : Color.clear)
                             }
                             .buttonStyle(.plain)
-                            if index < contextSuggestions.count - 1 {
+                            if index < autocompleteSuggestions.count - 1 {
                                 Divider()
                             }
                         }
@@ -472,6 +481,46 @@ struct PlainShellView: View {
                     )
                     .shadow(color: Color.black.opacity(0.1), radius: 6, x: 0, y: 3)
                     .frame(maxWidth: 260)
+                    .offset(y: Measurement.inputBarHeight + 4)
+                    .zIndex(100)
+                }
+            }
+            .overlay(alignment: .topTrailing) {
+                if isDueDatePickerPresented {
+                    VStack(spacing: Spacing.md) {
+                        DatePicker(
+                            "Due date",
+                            selection: $dueDatePickerValue,
+                            displayedComponents: .date
+                        )
+                        .datePickerStyle(.graphical)
+                        .labelsHidden()
+                        .frame(width: 260, height: 280)
+
+                        HStack {
+                            Button("Cancel") {
+                                isDueDatePickerPresented = false
+                            }
+                            .buttonStyle(.plain)
+                            .foregroundStyle(PlainTokens.TextToken.muted)
+
+                            Spacer()
+
+                            Button("Set Date") {
+                                insertDueDate(dueDatePickerValue)
+                            }
+                            .buttonStyle(.borderedProminent)
+                        }
+                    }
+                    .padding(Spacing.lg)
+                    .background(PlainTokens.Surface.input)
+                    .clipShape(RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Radius.md, style: .continuous)
+                            .stroke(PlainTokens.Border.input, lineWidth: 1)
+                    )
+                    .shadow(color: Color.black.opacity(0.1), radius: 6, x: 0, y: 3)
+                    .frame(width: 290)
                     .offset(y: Measurement.inputBarHeight + 4)
                     .zIndex(100)
                 }
@@ -641,18 +690,20 @@ struct PlainShellView: View {
             // Completion circle
             Button {
                 let wasCompleted = row.isCompleted
-                if !wasCompleted && !reduceMotion {
+                if wasCompleted {
+                    model.toggleCompletion(lineIdentity: row.id, undoManager: undoManager)
+                } else {
+                    // Show checkmark animation before completing
                     completingRowID = row.id
+                    showToast("Task completed · ")
                     Task { @MainActor in
-                        try? await Task.sleep(for: .milliseconds(300))
+                        try? await Task.sleep(for: .milliseconds(600))
+                        model.toggleCompletion(lineIdentity: row.id, undoManager: undoManager)
+                        try? await Task.sleep(for: .milliseconds(200))
                         if completingRowID == row.id {
                             completingRowID = nil
                         }
                     }
-                }
-                model.toggleCompletion(lineIdentity: row.id, undoManager: undoManager)
-                if !wasCompleted {
-                    showToast("Task completed · ")
                 }
             } label: {
                 completionCircle(row: row)
@@ -822,8 +873,9 @@ struct PlainShellView: View {
     }
 
     private func completionCircle(row: PlainShellModel.Row) -> some View {
-        ZStack {
-            if row.isCompleted {
+        let isAnimatingComplete = completingRowID == row.id
+        return ZStack {
+            if row.isCompleted || isAnimatingComplete {
                 Circle()
                     .fill(PlainTokens.Status.completed)
                     .frame(width: Measurement.completionCircleDiameter, height: Measurement.completionCircleDiameter)
@@ -1343,105 +1395,172 @@ struct PlainShellView: View {
     private func submitNewTask() {
         let text = newTaskText
         guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
-        trackRecentContexts(in: text)
+        trackRecentTags(in: text)
         model.addTask(rawText: text, undoManager: undoManager)
         newTaskText = ""
-        contextSuggestions = []
+        autocompleteSuggestions = []
+        autocompletePrefix = nil
+        isDueDatePickerPresented = false
         flashHighlight(for: model.selectedRowID)
     }
 
-    // MARK: - Context Autocomplete
+    // MARK: - Tag Autocomplete (@context, +project) & Due Date Picker
 
     private static let recentContextsKey = "PlainRecentContexts"
-    private static let maxRecentContexts = 10
+    private static let recentProjectsKey = "PlainRecentProjects"
+    private static let maxRecentTags = 10
 
-    private func updateContextSuggestions(for text: String) {
-        guard let atRange = findActiveAtToken(in: text) else {
-            contextSuggestions = []
-            return
+    private func updateAutocompleteSuggestions(for text: String) {
+        // Check for due: trigger first
+        if text.hasSuffix("due:") || text.contains(" due:") {
+            let trimmed = text.trimmingCharacters(in: .whitespaces)
+            if trimmed.hasSuffix("due:") {
+                isDueDatePickerPresented = true
+                dueDatePickerValue = Date()
+                autocompleteSuggestions = []
+                return
+            }
         }
 
-        let partial = String(text[atRange]).lowercased()
-        let allContexts = model.contextCounts.map(\.name)
-        guard !allContexts.isEmpty else {
-            contextSuggestions = []
-            return
-        }
+        isDueDatePickerPresented = false
 
-        let recentContexts = UserDefaults.standard.stringArray(forKey: Self.recentContextsKey) ?? []
+        // Check for @context or +project token
+        if let (range, prefix) = findActiveTagToken(in: text) {
+            let partial = String(text[range]).lowercased()
+            let allTags: [String]
+            let recentKey: String
 
-        // Filter by partial match
-        let matching: [String]
-        if partial.isEmpty {
-            matching = allContexts
+            if prefix == "@" {
+                allTags = model.contextCounts.map(\.name)
+                recentKey = Self.recentContextsKey
+            } else {
+                allTags = model.projectCounts.map(\.name)
+                recentKey = Self.recentProjectsKey
+            }
+
+            guard !allTags.isEmpty else {
+                autocompleteSuggestions = []
+                autocompletePrefix = nil
+                return
+            }
+
+            let recentTags = UserDefaults.standard.stringArray(forKey: recentKey) ?? []
+            let matching = partial.isEmpty ? allTags : allTags.filter { $0.lowercased().hasPrefix(partial) }
+
+            guard !matching.isEmpty else {
+                autocompleteSuggestions = []
+                autocompletePrefix = nil
+                return
+            }
+
+            let matchingSet = Set(matching)
+            let recentMatching = recentTags.filter { matchingSet.contains($0) }
+            let topRecent = Array(recentMatching.prefix(3))
+            let topRecentSet = Set(topRecent)
+            let remaining = matching.filter { !topRecentSet.contains($0) }.sorted()
+
+            autocompleteSuggestions = topRecent + remaining
+            autocompleteIndex = 0
+            autocompletePrefix = Character(prefix)
         } else {
-            matching = allContexts.filter { $0.lowercased().hasPrefix(partial) }
+            autocompleteSuggestions = []
+            autocompletePrefix = nil
         }
-
-        guard !matching.isEmpty else {
-            contextSuggestions = []
-            return
-        }
-
-        // Build ordered list: up to 3 recent first, then remaining alpha
-        let matchingSet = Set(matching)
-        let recentMatching = recentContexts.filter { matchingSet.contains($0) }
-        let topRecent = Array(recentMatching.prefix(3))
-        let topRecentSet = Set(topRecent)
-        let remaining = matching.filter { !topRecentSet.contains($0) }.sorted()
-
-        contextSuggestions = topRecent + remaining
-        contextSuggestionIndex = 0
     }
 
-    private func findActiveAtToken(in text: String) -> Range<String.Index>? {
-        // Find the last '@' that's either at the start or preceded by a space
-        guard let atIndex = text.lastIndex(of: "@") else { return nil }
-        let isAtStart = atIndex == text.startIndex
-        let precededBySpace = !isAtStart && text[text.index(before: atIndex)] == " "
+    private func findActiveTagToken(in text: String) -> (Range<String.Index>, String)? {
+        // Check both @ and + — whichever appears last and is active
+        let atResult = findActivePrefixToken(in: text, prefix: "@")
+        let plusResult = findActivePrefixToken(in: text, prefix: "+")
+
+        switch (atResult, plusResult) {
+        case let (.some(atRange), .some(plusRange)):
+            // Return whichever is later in the string
+            return atRange.lowerBound > plusRange.lowerBound ? (atRange, "@") : (plusRange, "+")
+        case let (.some(atRange), .none):
+            return (atRange, "@")
+        case let (.none, .some(plusRange)):
+            return (plusRange, "+")
+        case (.none, .none):
+            return nil
+        }
+    }
+
+    private func findActivePrefixToken(in text: String, prefix: String) -> Range<String.Index>? {
+        let prefixChar = prefix.first!
+        guard let prefixIndex = text.lastIndex(of: prefixChar) else { return nil }
+        let isAtStart = prefixIndex == text.startIndex
+        let precededBySpace = !isAtStart && text[text.index(before: prefixIndex)] == " "
         guard isAtStart || precededBySpace else { return nil }
 
-        let afterAt = text.index(after: atIndex)
-        // If there's a space after the partial, the token is closed
-        let rest = text[afterAt...]
+        let afterPrefix = text.index(after: prefixIndex)
+        let rest = text[afterPrefix...]
         if rest.contains(" ") { return nil }
 
-        return afterAt..<text.endIndex
+        return afterPrefix..<text.endIndex
     }
 
-    private func acceptContextSuggestion(_ context: String) {
-        guard let atRange = findActiveAtToken(in: newTaskText) else { return }
-        let atIndex = newTaskText.index(before: atRange.lowerBound) // the '@' character
-        let before = newTaskText[newTaskText.startIndex..<atIndex]
-        newTaskText = before + "@\(context) "
-        contextSuggestions = []
+    private func acceptAutocompleteSuggestion(_ suggestion: String) {
+        guard let (range, prefix) = findActiveTagToken(in: newTaskText) else { return }
+        let prefixIndex = newTaskText.index(before: range.lowerBound)
+        let before = newTaskText[newTaskText.startIndex..<prefixIndex]
+        newTaskText = before + "\(prefix)\(suggestion) "
+        autocompleteSuggestions = []
+        autocompletePrefix = nil
     }
 
-    private func isRecentContext(_ context: String) -> Bool {
-        let recent = UserDefaults.standard.stringArray(forKey: Self.recentContextsKey) ?? []
-        return recent.prefix(3).contains(context)
+    private func isRecentTag(_ tag: String, prefix: Character?) -> Bool {
+        let key = prefix == "+" ? Self.recentProjectsKey : Self.recentContextsKey
+        let recent = UserDefaults.standard.stringArray(forKey: key) ?? []
+        return recent.prefix(3).contains(tag)
     }
 
-    private func trackRecentContexts(in text: String) {
-        // Extract all @context tokens from the submitted text
+    private func trackRecentTags(in text: String) {
         let words = text.split(separator: " ")
-        let contexts = words.compactMap { word -> String? in
-            guard word.hasPrefix("@"), word.count > 1 else { return nil }
-            return String(word.dropFirst())
-        }
-        guard !contexts.isEmpty else { return }
+        var contexts: [String] = []
+        var projects: [String] = []
 
-        var recent = UserDefaults.standard.stringArray(forKey: Self.recentContextsKey) ?? []
-        // Prepend new contexts (most recent first), removing duplicates
-        for context in contexts.reversed() {
-            recent.removeAll { $0 == context }
-            recent.insert(context, at: 0)
+        for word in words {
+            if word.hasPrefix("@"), word.count > 1 {
+                contexts.append(String(word.dropFirst()))
+            } else if word.hasPrefix("+"), word.count > 1 {
+                projects.append(String(word.dropFirst()))
+            }
         }
-        // Trim to max
-        if recent.count > Self.maxRecentContexts {
-            recent = Array(recent.prefix(Self.maxRecentContexts))
+
+        if !contexts.isEmpty {
+            updateRecentList(key: Self.recentContextsKey, newItems: contexts)
         }
-        UserDefaults.standard.set(recent, forKey: Self.recentContextsKey)
+        if !projects.isEmpty {
+            updateRecentList(key: Self.recentProjectsKey, newItems: projects)
+        }
+    }
+
+    private func updateRecentList(key: String, newItems: [String]) {
+        var recent = UserDefaults.standard.stringArray(forKey: key) ?? []
+        for item in newItems.reversed() {
+            recent.removeAll { $0 == item }
+            recent.insert(item, at: 0)
+        }
+        if recent.count > Self.maxRecentTags {
+            recent = Array(recent.prefix(Self.maxRecentTags))
+        }
+        UserDefaults.standard.set(recent, forKey: key)
+    }
+
+    private func insertDueDate(_ date: Date) {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        let dateString = formatter.string(from: date)
+
+        // Replace "due:" at the end of text with "due:YYYY-MM-DD "
+        if let range = newTaskText.range(of: "due:", options: .backwards) {
+            newTaskText = newTaskText[newTaskText.startIndex..<range.lowerBound] + "due:\(dateString) "
+        } else {
+            newTaskText += " due:\(dateString) "
+        }
+
+        isDueDatePickerPresented = false
     }
 
     private func flashHighlight(for id: LineIdentity?) {
@@ -3216,7 +3335,33 @@ final class PlainShellModel: ObservableObject {
                 .map { title, groupedRows in
                     RowGroup(id: title, title: title, rows: groupedRows)
                 }
+        case .context:
+            return Dictionary(grouping: rows) { firstTag(from: $0.rawText, prefix: "@") ?? "No Context" }
+                .sorted { lhs, rhs in
+                    if lhs.key == "No Context" { return false }
+                    if rhs.key == "No Context" { return true }
+                    return lhs.key.localizedCaseInsensitiveCompare(rhs.key) == .orderedAscending
+                }
+                .map { title, groupedRows in
+                    RowGroup(id: title, title: title == "No Context" ? title : "@\(title)", rows: groupedRows)
+                }
+        case .project:
+            return Dictionary(grouping: rows) { firstTag(from: $0.rawText, prefix: "+") ?? "No Project" }
+                .sorted { lhs, rhs in
+                    if lhs.key == "No Project" { return false }
+                    if rhs.key == "No Project" { return true }
+                    return lhs.key.localizedCaseInsensitiveCompare(rhs.key) == .orderedAscending
+                }
+                .map { title, groupedRows in
+                    RowGroup(id: title, title: title == "No Project" ? title : "+\(title)", rows: groupedRows)
+                }
         }
+    }
+
+    private func firstTag(from rawText: String, prefix: String) -> String? {
+        rawText.split(separator: " ")
+            .first { $0.hasPrefix(prefix) && $0.count > 1 }
+            .map { String($0.dropFirst()) }
     }
 
     private func priorityGroupTitle(for row: Row) -> String {
@@ -3440,6 +3585,26 @@ final class PlainShellModel: ObservableObject {
                 return comparison == .orderedAscending
             }
 
+            return lhs.index < rhs.index
+        case .context:
+            let lhsContext = lhs.task.contexts.sorted().first ?? ""
+            let rhsContext = rhs.task.contexts.sorted().first ?? ""
+            if lhsContext != rhsContext {
+                if lhsContext.isEmpty { return false }
+                if rhsContext.isEmpty { return true }
+                let cmp = lhsContext.localizedCaseInsensitiveCompare(rhsContext)
+                if cmp != .orderedSame { return cmp == .orderedAscending }
+            }
+            return lhs.index < rhs.index
+        case .project:
+            let lhsProject = lhs.task.projects.sorted().first ?? ""
+            let rhsProject = rhs.task.projects.sorted().first ?? ""
+            if lhsProject != rhsProject {
+                if lhsProject.isEmpty { return false }
+                if rhsProject.isEmpty { return true }
+                let cmp = lhsProject.localizedCaseInsensitiveCompare(rhsProject)
+                if cmp != .orderedSame { return cmp == .orderedAscending }
+            }
             return lhs.index < rhs.index
         }
     }

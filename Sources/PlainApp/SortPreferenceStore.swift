@@ -6,6 +6,8 @@ enum TaskSortMode: String, CaseIterable, Identifiable {
     case creationDate
     case dueDate
     case alphabetical
+    case context
+    case project
 
     var id: String {
         rawValue
@@ -23,6 +25,10 @@ enum TaskSortMode: String, CaseIterable, Identifiable {
             return "Due Date"
         case .alphabetical:
             return "Alphabetical"
+        case .context:
+            return "Context"
+        case .project:
+            return "Project"
         }
     }
 
@@ -37,6 +43,10 @@ enum TaskSortMode: String, CaseIterable, Identifiable {
         case .dueDate:
             return .alphabetical
         case .alphabetical:
+            return .context
+        case .context:
+            return .project
+        case .project:
             return .fileOrder
         }
     }
