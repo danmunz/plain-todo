@@ -891,6 +891,12 @@ struct PlainShellView: View {
                 .frame(height: Measurement.rowSeparatorThickness)
                 .padding(.leading, Spacing.xl + Measurement.completionCircleDiameter + Spacing.sm)
         }
+        .listRowBackground(
+            model.selectedRowIDs.contains(row.id)
+                ? PlainTokens.Selection.bg
+                : Color.clear
+        )
+        .listRowSeparator(.hidden)
         .tag(row.id)
     }
 
