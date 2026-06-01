@@ -40,6 +40,7 @@
 		BED3890ADC573A574947D28F /* TodoSerializer.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0E190EF4603D5AD3528E1A7 /* TodoSerializer.swift */; };
 		CF623C887725732752705241 /* SessionRestoreStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D24B5F77A61C59156CA864A4 /* SessionRestoreStore.swift */; };
 		CFE2790ED0C792C6EB3E4D0A /* CoordinatedTodoStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 977C67E1763A75558845983E /* CoordinatedTodoStoreTests.swift */; };
+		D1A6F516A1DBDD1715002A44 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5A92E422123FB83DED9432F3 /* Assets.xcassets */; };
 		D31440120324C7D24EC01C45 /* DesignTokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30FE67C41A5942A448483F64 /* DesignTokens.swift */; };
 		D34417B3AF823E32AC16B81A /* QuickAddPanelController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7ED98B2DC5394AD5F61C6E04 /* QuickAddPanelController.swift */; };
 		E0C841D4C17598ED93261B83 /* PlainWidgetSnapshotStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A650051833ACF5C47D0E8A89 /* PlainWidgetSnapshotStoreTests.swift */; };
@@ -144,6 +145,7 @@
 		374BEC8118DDB9E142FF11EC /* TodoParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodoParserTests.swift; sourceTree = "<group>"; };
 		42B3C25E91072D3B93EBE196 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		484F574EE539D1CC5379CBB9 /* PlainAppScenes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlainAppScenes.swift; sourceTree = "<group>"; };
+		5A92E422123FB83DED9432F3 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		5B46FB930146E8B673C98711 /* DatePhraseParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatePhraseParser.swift; sourceTree = "<group>"; };
 		5CE5628E209438C7082CBF9C /* DeepLinkRoute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeepLinkRoute.swift; sourceTree = "<group>"; };
 		62688EA1E817DDE6AC9AF859 /* malformed.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = malformed.txt; sourceTree = "<group>"; };
@@ -206,6 +208,7 @@
 		2035732345AEA24E66997CAB /* PlainApp */ = {
 			isa = PBXGroup;
 			children = (
+				5A92E422123FB83DED9432F3 /* Assets.xcassets */,
 				5CE5628E209438C7082CBF9C /* DeepLinkRoute.swift */,
 				30FE67C41A5942A448483F64 /* DesignTokens.swift */,
 				799FA40D305345E972A46620 /* Info.plist */,
@@ -491,6 +494,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D1A6F516A1DBDD1715002A44 /* Assets.xcassets in Resources */,
 				B328F742CC049904B1550A25 /* sample.txt in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
