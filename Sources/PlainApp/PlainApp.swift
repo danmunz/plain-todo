@@ -202,7 +202,9 @@ struct PlainShellView: View {
             isPresented: $isArchiveConfirmationPresented
         ) {
             Button("Archive") {
+                let count = model.archivableCompletedTaskCount
                 model.archiveCompletedTasks(undoManager: undoManager)
+                showToast(count == 1 ? "Archived 1 task · " : "Archived \(count) tasks · ")
             }
             Button("Cancel", role: .cancel) {}
         }
@@ -733,7 +735,7 @@ struct PlainShellView: View {
                 } else {
                     // Show checkmark animation before completing
                     completingRowID = row.id
-                    showToast("Task completed · ")
+                    showToast(completionToastMessage())
                     Task { @MainActor in
                         try? await Task.sleep(for: .milliseconds(600))
                         model.toggleCompletion(lineIdentity: row.id, undoManager: undoManager)
@@ -1258,7 +1260,7 @@ struct PlainShellView: View {
                 for id in ids {
                     model.toggleCompletion(lineIdentity: id, undoManager: undoManager)
                 }
-                showToast(ids.count == 1 ? "Task completed · " : "\(ids.count) tasks completed · ")
+                showToast(ids.count == 1 ? completionToastMessage() : "\(ids.count) tasks completed · ")
             }
             .keyboardShortcut(.space, modifiers: [])
 
@@ -1674,6 +1676,18 @@ struct PlainShellView: View {
         }
     }
 
+    private static let completionMessages = [
+        "Done · ",
+        "Checked off · ",
+        "One down · ",
+        "Handled · ",
+        "Sorted · ",
+    ]
+
+    private func completionToastMessage() -> String {
+        Self.completionMessages[Int.random(in: 0..<Self.completionMessages.count)]
+    }
+
     private func dismissSearchOverlay(keepingFilter: Bool) {
         if !keepingFilter {
             clearSearch()
@@ -1936,12 +1950,17 @@ private struct PlaceholderCard: View {
     var secondaryActionTitle: String?
     var secondaryAction: (() -> Void)?
     var secondaryActionAccessibilityIdentifier: String?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var iconAppeared = false
 
     var body: some View {
         VStack(spacing: Spacing.lg) {
             Image(systemName: systemImage)
                 .font(.system(size: 32, weight: .ultraLight))
                 .foregroundStyle(PlainTokens.TextToken.muted)
+                .scaleEffect(iconAppeared ? 1.0 : 0.8)
+                .opacity(iconAppeared ? 1.0 : 0.0)
+                .animation(reduceMotion ? nil : .easeOut(duration: 0.4), value: iconAppeared)
 
             Text(title)
                 .font(PlainType.sidebarLabel)
@@ -1967,6 +1986,7 @@ private struct PlaceholderCard: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(Spacing.xxl)
+        .onAppear { iconAppeared = true }
     }
 }
 
@@ -2213,12 +2233,12 @@ final class PlainShellModel: ObservableObject {
     var emptyStateMessage: String {
         if hasActiveSearch { return "Try a different search or clear the active filter." }
         switch selection {
-        case .inbox: return "Cmd+N to add a task."
+        case .inbox: return "Cmd+N to begin. One task at a time."
         case .today: return "No deadlines pressing — enjoy the breathing room."
-        case .overdue: return "All caught up. Nice."
+        case .overdue: return "All caught up. Nice work."
         case .done: return "Archive completed tasks to move them here."
         case .project(let p): return "No tasks tagged +\(p) right now."
-        case .context(let c): return "No @\(c) — nice."
+        case .context(let c): return "Nothing under @\(c) — one less thing."
         }
     }
 
