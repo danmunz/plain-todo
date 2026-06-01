@@ -1873,13 +1873,13 @@ private struct TaskActionBar: View {
                             : isHovered ? action.tint
                             : PlainTokens.TextToken.muted
                         )
-                        .frame(width: 40, height: 40)
+                        .frame(width: 30, height: 30)
                         .background {
                             Circle()
                                 .fill(isHovered ? action.tint.opacity(0.12) : Color.clear)
                                 .scaleEffect(isHovered ? 1.0 : 0.6)
                         }
-                        .scaleEffect(isHovered ? 1.12 : 1.0)
+                        .scaleEffect(isHovered ? 1.2 : 1.0)
                 }
                 .buttonStyle(.plain)
                 .disabled(isDisabled)
