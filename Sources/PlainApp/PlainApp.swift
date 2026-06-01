@@ -629,6 +629,7 @@ struct PlainShellView: View {
             .listStyle(.inset)
             .scrollContentBackground(.hidden)
             .background(PlainTokens.Surface.canvas)
+            .background(DisableListSelectionHighlight())
             .onMoveCommand { direction in
                 switch direction {
                 case .down:
@@ -1806,6 +1807,38 @@ private func priorityBgColor(_ priority: String) -> Color {
     case "B": return PlainTokens.Priority.bBg
     case "C": return PlainTokens.Priority.cBg
     default: return PlainTokens.Priority.lowBg
+    }
+}
+
+// MARK: - Disable Native List Selection Highlight
+
+/// Walks up the NSView hierarchy to find the enclosing NSTableView
+/// and disables the system selection highlight so we can paint our own.
+private struct DisableListSelectionHighlight: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSView {
+        let view = NSView()
+        DispatchQueue.main.async {
+            disableSelectionHighlight(in: view)
+        }
+        return view
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {}
+
+    private func disableSelectionHighlight(in view: NSView) {
+        guard let tableView = findTableView(from: view) else { return }
+        tableView.selectionHighlightStyle = .none
+    }
+
+    private func findTableView(from view: NSView) -> NSTableView? {
+        var current: NSView? = view
+        while let v = current {
+            if let table = v as? NSTableView {
+                return table
+            }
+            current = v.superview
+        }
+        return nil
     }
 }
 
