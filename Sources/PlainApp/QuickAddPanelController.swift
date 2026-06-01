@@ -108,7 +108,7 @@ final class QuickAddPanelController: ObservableObject {
         }
 
         let panel = QuickAddPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 560, height: 240),
+            contentRect: NSRect(x: 0, y: 0, width: 520, height: 240),
             styleMask: [.borderless],
             backing: .buffered,
             defer: false
@@ -193,52 +193,65 @@ private struct QuickAddPanelView: View {
     @FocusState private var isInputFocused: Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: Spacing.lg) {
             HStack(alignment: .firstTextBaseline) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Quick Add")
-                        .font(.title2.weight(.semibold))
+                VStack(alignment: .leading, spacing: Spacing.xs) {
+                    Text("QUICK ADD")
+                        .font(PlainType.sidebarSection)
+                        .tracking(Tracking.sidebarSection)
+                        .foregroundStyle(PlainTokens.Syntax.project)
                     Text(controller.destinationDescription)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .font(PlainType.taskMeta)
+                        .foregroundStyle(PlainTokens.TextToken.muted)
                 }
 
                 Spacer()
 
                 Text("Ctrl+Opt+T")
-                    .font(.caption.monospaced())
-                    .foregroundStyle(.secondary)
+                    .font(PlainType.inputHint)
+                    .foregroundStyle(PlainTokens.TextToken.muted)
+                    .padding(.horizontal, Spacing.sm)
+                    .padding(.vertical, Spacing.xs)
+                    .background(RoundedRectangle(cornerRadius: Radius.sm, style: .continuous).fill(Color.primary.opacity(0.06)))
             }
 
             TextField("Capture a task...", text: $controller.inputText)
-                .textFieldStyle(.roundedBorder)
-                .font(.title3)
+                .textFieldStyle(.plain)
+                .font(PlainType.taskBody)
+                .padding(.horizontal, Spacing.lg)
+                .padding(.vertical, Spacing.md)
+                .background(PlainTokens.Surface.input, in: RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: Radius.md, style: .continuous)
+                        .stroke(PlainTokens.Border.input, lineWidth: 1)
+                )
                 .focused($isInputFocused)
                 .onSubmit {
                     controller.submit()
                 }
 
             if let previewText = controller.previewText {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Preview")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: Spacing.sm) {
+                    Text("PREVIEW")
+                        .font(PlainType.sidebarSection)
+                        .tracking(Tracking.sidebarSection)
+                        .foregroundStyle(PlainTokens.TextToken.muted)
                     Text(previewText)
-                        .font(.caption.monospaced())
+                        .font(PlainType.scratchPad)
+                        .foregroundStyle(PlainTokens.TextToken.secondary)
                         .textSelection(.enabled)
                 }
-                .padding(10)
-                .background(.background.opacity(0.75))
-                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .padding(Spacing.lg)
+                .background(PlainTokens.Surface.input, in: RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
             }
 
             if let errorMessage = controller.errorMessage {
-                HStack(spacing: 8) {
+                HStack(spacing: Spacing.md) {
                     Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(PlainTokens.Status.conflict)
                     Text(errorMessage)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .font(PlainType.taskMeta)
+                        .foregroundStyle(PlainTokens.TextToken.secondary)
                     Spacer()
                 }
             }
@@ -264,15 +277,15 @@ private struct QuickAddPanelView: View {
                 .disabled(controller.inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
         }
-        .padding(20)
-        .frame(width: 560)
+        .padding(Spacing.xl)
+        .frame(width: 480)
         .background(.regularMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: Radius.xl, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(.quaternary, lineWidth: 1)
+            RoundedRectangle(cornerRadius: Radius.xl, style: .continuous)
+                .stroke(PlainTokens.Border.input, lineWidth: 1)
         }
-        .padding(12)
+        .padding(Spacing.lg)
         .onAppear {
             isInputFocused = true
         }

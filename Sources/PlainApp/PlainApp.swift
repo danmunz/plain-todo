@@ -265,39 +265,60 @@ struct PlainShellView: View {
     }
 
     private var onboardingView: some View {
-        VStack(spacing: 10) {
-            Image(systemName: "text.page")
-                .font(.system(size: 28))
-                .foregroundStyle(.secondary)
+        VStack(spacing: Spacing.xxl) {
+            Spacer()
 
-            Text("Point Plain at your todo.txt file.")
-                .font(.headline)
+            VStack(spacing: Spacing.lg) {
+                Text("plain")
+                    .font(.system(size: 36, weight: .medium, design: .default))
+                    .tracking(Tracking.onboardingHeading)
+                    .foregroundStyle(PlainTokens.TextToken.primary)
 
-            Text("Open an existing todo.txt, create a new one, or load the bundled sample.")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
+                Text("A todo.txt client for macOS.\nReads your file. That's it, really.")
+                    .font(PlainType.emptyState)
+                    .foregroundStyle(PlainTokens.TextToken.secondary)
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(4)
+            }
 
-            HStack(spacing: 12) {
-                Button("Open an existing file") {
+            VStack(spacing: Spacing.lg) {
+                Button {
                     isFileImporterPresented = true
+                } label: {
+                    Text("Open an Existing File")
+                        .font(PlainType.sidebarLabel)
+                        .frame(width: 220)
                 }
+                .controlSize(.large)
+                .buttonStyle(.borderedProminent)
                 .accessibilityIdentifier("plain.onboarding.open")
 
-                Button("Create a new file") {
+                Button {
                     model.createNewFile()
+                } label: {
+                    Text("Create a New File")
+                        .font(PlainType.sidebarLabel)
+                        .frame(width: 220)
                 }
+                .controlSize(.large)
+                .buttonStyle(.bordered)
                 .accessibilityIdentifier("plain.onboarding.create")
 
-                Button("Use bundled sample") {
+                Button {
                     model.loadBundledSample()
+                } label: {
+                    Text("Try with a sample file")
+                        .font(PlainType.taskMeta)
+                        .foregroundStyle(PlainTokens.TextToken.muted)
                 }
+                .buttonStyle(.plain)
                 .accessibilityIdentifier("plain.onboarding.sample")
             }
-            .padding(.top, 8)
+
+            Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding(24)
+        .background(PlainTokens.Surface.canvas)
         .accessibilityIdentifier("plain.onboarding")
     }
 
@@ -331,7 +352,7 @@ struct PlainShellView: View {
         VStack(alignment: .leading, spacing: 0) {
             if let transientError = model.transientError {
                 Text(transientError)
-                    .font(.caption)
+                    .font(PlainType.taskMeta)
                     .foregroundStyle(PlainTokens.Status.destructive)
                     .padding(.horizontal, Spacing.xl)
                     .padding(.top, Spacing.md)
@@ -417,16 +438,16 @@ struct PlainShellView: View {
 
             if model.hasActiveSearch && !isSearchPresented {
                 searchFilterPill
-                    .padding(.horizontal, 20)
-                    .padding(.top, 10)
+                    .padding(.horizontal, Spacing.xl)
+                    .padding(.top, Spacing.md)
             }
 
             if !model.isEditable {
                 Text("Editing is disabled for the bundled sample. Open a writable todo.txt file to try the write path.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 20)
-                    .padding(.top, 8)
+                    .font(PlainType.taskMeta)
+                    .foregroundStyle(PlainTokens.TextToken.muted)
+                    .padding(.horizontal, Spacing.xl)
+                    .padding(.top, Spacing.md)
             }
 
             List(selection: $model.selectedRowIDs) {
@@ -747,12 +768,14 @@ struct PlainShellView: View {
     private var archiveDetailView: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .firstTextBaseline) {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Done")
-                        .font(.largeTitle.weight(.semibold))
+                VStack(alignment: .leading, spacing: Spacing.sm) {
+                    Text("ARCHIVE")
+                        .font(PlainType.sidebarSection)
+                        .tracking(Tracking.sidebarSection)
+                        .foregroundStyle(PlainTokens.Syntax.project)
                     Text(model.archiveDescription)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                        .font(PlainType.taskMeta)
+                        .foregroundStyle(PlainTokens.TextToken.muted)
                 }
 
                 Spacer()
@@ -852,12 +875,15 @@ struct PlainShellView: View {
     private var scratchPadDetailView: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .firstTextBaseline) {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Scratch Pad")
-                        .font(.largeTitle.weight(.semibold))
-                    Text("Edit the full todo.txt file directly. Saving reparses and writes through the coordinated store.")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: Spacing.sm) {
+                    Text("SCRATCH PAD")
+                        .font(PlainType.sidebarSection)
+                        .tracking(Tracking.sidebarSection)
+                        .foregroundStyle(PlainTokens.Syntax.project)
+
+                    Text("Edit the full todo.txt directly. Save reparses and writes through the coordinated store.")
+                        .font(PlainType.taskMeta)
+                        .foregroundStyle(PlainTokens.TextToken.muted)
                 }
 
                 Spacer()
@@ -882,28 +908,34 @@ struct PlainShellView: View {
 
             if let transientError = model.transientError {
                 Text(transientError)
-                    .font(.caption)
-                    .foregroundStyle(.red)
-                    .padding(.horizontal, 20)
-                    .padding(.top, 8)
+                    .font(PlainType.taskMeta)
+                    .foregroundStyle(PlainTokens.Status.destructive)
+                    .padding(.horizontal, Spacing.xl)
+                    .padding(.top, Spacing.md)
             }
 
             TextEditor(text: $scratchPadText)
-                .font(.body.monospaced())
-                .padding(16)
-                .background(Color(nsColor: .textBackgroundColor))
-                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                .padding(20)
+                .font(PlainType.scratchPad)
+                .padding(Spacing.xl)
+                .scrollContentBackground(.hidden)
+                .background(PlainTokens.Surface.input)
+                .clipShape(RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: Radius.md, style: .continuous)
+                        .stroke(PlainTokens.Border.input, lineWidth: 1)
+                )
+                .padding(Spacing.xl)
 
             HStack {
                 Text(model.sourceDescription)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(PlainType.statusBar)
+                    .foregroundStyle(PlainTokens.TextToken.muted)
                 Spacer()
             }
-            .padding(.horizontal, 20)
-            .padding(.bottom, 12)
+            .padding(.horizontal, Spacing.xl)
+            .padding(.bottom, Spacing.lg)
         }
+        .background(PlainTokens.Surface.canvas)
     }
 
     private var conflictBanner: some View {
@@ -1143,12 +1175,14 @@ struct PlainShellView: View {
     }
 
     private var searchOverlay: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: Spacing.lg) {
             Image(systemName: "magnifyingglass")
-                .foregroundStyle(.secondary)
+                .foregroundStyle(PlainTokens.TextToken.muted)
+                .font(.system(size: 16, weight: .medium))
 
             TextField("Search tasks", text: $searchText)
                 .textFieldStyle(.plain)
+                .font(PlainType.taskBody)
                 .focused($focusedField, equals: .search)
                 .onSubmit {
                     dismissSearchOverlay(keepingFilter: true)
@@ -1159,21 +1193,21 @@ struct PlainShellView: View {
                     searchText = ""
                 } label: {
                     Image(systemName: "xmark.circle.fill")
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(PlainTokens.TextToken.muted)
                 }
                 .buttonStyle(.plain)
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .frame(maxWidth: 420)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .padding(.horizontal, Spacing.xl)
+        .padding(.vertical, Spacing.lg)
+        .frame(maxWidth: Measurement.searchOverlayWidth)
+        .background(PlainTokens.Surface.input, in: RoundedRectangle(cornerRadius: Radius.lg, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(Color.primary.opacity(0.08), lineWidth: 1)
+            RoundedRectangle(cornerRadius: Radius.lg, style: .continuous)
+                .stroke(PlainTokens.Border.input, lineWidth: 1)
         )
-        .shadow(color: Color.black.opacity(0.08), radius: 16, x: 0, y: 8)
-        .padding(.horizontal, 24)
+        .shadow(color: Color.black.opacity(0.12), radius: 20, x: 0, y: 8)
+        .padding(.horizontal, Spacing.xxl)
         .onAppear {
             DispatchQueue.main.async {
                 focusedField = .search
@@ -1182,22 +1216,25 @@ struct PlainShellView: View {
     }
 
     private var searchFilterPill: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: Spacing.md) {
             Image(systemName: "magnifyingglass")
                 .font(.caption.weight(.semibold))
+                .foregroundStyle(PlainTokens.Syntax.project)
             Text("Showing results for \"\(model.activeSearchQuery)\"")
-                .font(.caption.weight(.medium))
+                .font(PlainType.taskMeta)
+                .foregroundStyle(PlainTokens.TextToken.secondary)
             Button {
                 clearSearch()
             } label: {
                 Image(systemName: "xmark.circle.fill")
                     .font(.caption)
+                    .foregroundStyle(PlainTokens.TextToken.muted)
             }
             .buttonStyle(.plain)
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
-        .background(Color(nsColor: .controlBackgroundColor), in: Capsule())
+        .padding(.horizontal, Spacing.lg)
+        .padding(.vertical, Spacing.sm)
+        .background(PlainTokens.Surface.hover, in: Capsule())
     }
 
     private func presentSearchOverlay() {
@@ -1282,13 +1319,14 @@ private struct ConflictDiffSheet: View {
     let closeAction: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: Spacing.xl) {
+            VStack(alignment: .leading, spacing: Spacing.sm) {
                 Text("Resolve Conflict")
-                    .font(.title2.weight(.semibold))
+                    .font(PlainType.sidebarLabel)
+                    .foregroundStyle(PlainTokens.TextToken.primary)
                 Text("Compare the disk version with your current \(diff.draftTitle.lowercased()) before deciding which one to keep.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .font(PlainType.taskMeta)
+                    .foregroundStyle(PlainTokens.TextToken.secondary)
             }
 
             HStack(alignment: .top, spacing: 16) {
@@ -1319,16 +1357,19 @@ private struct ConflictDiffSheet: View {
     }
 
     private func diffColumn(title: String, text: String) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: Spacing.md) {
             Text(title)
-                .font(.headline)
+                .font(PlainType.sidebarLabel)
+                .foregroundStyle(PlainTokens.TextToken.primary)
 
             TextEditor(text: .constant(text))
-                .font(.body.monospaced())
+                .font(PlainType.scratchPad)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .scrollContentBackground(.hidden)
+                .background(PlainTokens.Surface.input)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .stroke(.quaternary, lineWidth: 1)
+                    RoundedRectangle(cornerRadius: Radius.md, style: .continuous)
+                        .stroke(PlainTokens.Border.input, lineWidth: 1)
                 )
                 .disabled(true)
         }
@@ -1513,21 +1554,22 @@ private struct PlaceholderCard: View {
     var secondaryActionAccessibilityIdentifier: String?
 
     var body: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: Spacing.lg) {
             Image(systemName: systemImage)
-                .font(.system(size: 28))
-                .foregroundStyle(.secondary)
+                .font(.system(size: 24))
+                .foregroundStyle(PlainTokens.TextToken.muted)
 
             Text(title)
-                .font(.headline)
+                .font(PlainType.sidebarLabel)
+                .foregroundStyle(PlainTokens.TextToken.secondary)
 
             Text(message)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
+                .font(PlainType.taskMeta)
+                .foregroundStyle(PlainTokens.TextToken.muted)
                 .multilineTextAlignment(.center)
 
             if let primaryActionTitle, let primaryAction {
-                HStack(spacing: 12) {
+                HStack(spacing: Spacing.lg) {
                     Button(primaryActionTitle, action: primaryAction)
                         .accessibilityIdentifier(primaryActionAccessibilityIdentifier ?? "")
 
@@ -1536,11 +1578,11 @@ private struct PlaceholderCard: View {
                             .accessibilityIdentifier(secondaryActionAccessibilityIdentifier ?? "")
                     }
                 }
-                .padding(.top, 8)
+                .padding(.top, Spacing.md)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding(24)
+        .padding(Spacing.xxl)
     }
 }
 

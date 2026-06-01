@@ -185,6 +185,7 @@ struct PreferencesView: View {
                 .tabItem { Label("Advanced", systemImage: "wrench.and.screwdriver") }
         }
         .frame(width: 480, height: 320)
+        .background(PlainTokens.Surface.canvas)
     }
 }
 
@@ -288,18 +289,19 @@ private struct ShortcutsPreferencesTab: View {
             Divider()
 
             Text("Keyboard Shortcuts")
-                .font(.headline)
+                .font(PlainType.sidebarLabel)
+                .foregroundStyle(PlainTokens.TextToken.primary)
 
             ScrollView {
                 Grid(alignment: .leading, horizontalSpacing: 24, verticalSpacing: 6) {
                     ForEach(shortcuts, id: \.0) { shortcut in
                         GridRow {
                             Text(shortcut.0)
-                                .font(.body)
+                                .font(PlainType.taskMeta)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                             Text(shortcut.1)
-                                .font(.body.monospaced())
-                                .foregroundStyle(.secondary)
+                                .font(PlainType.scratchPad)
+                                .foregroundStyle(PlainTokens.TextToken.muted)
                         }
                     }
                 }
