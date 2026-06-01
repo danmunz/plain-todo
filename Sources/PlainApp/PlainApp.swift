@@ -434,7 +434,7 @@ struct PlainShellView: View {
                         submitNewTask()
                     } label: {
                         Image(systemName: "arrow.up.circle.fill")
-                            .foregroundStyle(Color.accentColor)
+                            .foregroundStyle(PlainTokens.accent)
                     }
                     .buttonStyle(.plain)
                     .disabled(!model.isEditable)
@@ -839,7 +839,7 @@ struct PlainShellView: View {
         }
         .background {
             if highlightedRowID == row.id {
-                Color.accentColor.opacity(Opacity.highlightRow)
+                PlainTokens.accent.opacity(Opacity.highlightRow)
             } else if hoveredRowID == row.id {
                 PlainTokens.Surface.hover
             }
@@ -2830,6 +2830,8 @@ final class PlainShellModel: ObservableObject {
                 ?? selectedRowID
             registerUndo(actionName: offset < 0 ? "Move Task Up" : "Move Task Down", transaction: transaction, undoManager: undoManager)
             transientError = nil
+        } catch is TaskMutationError {
+            // Boundary reached during rapid clicks — silently ignore
         } catch {
             transientError = error.localizedDescription
         }

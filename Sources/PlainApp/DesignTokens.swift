@@ -22,6 +22,11 @@ enum PlainTokens {
         static let g900 = Color(light: .hex(0x2C2A28), dark: .hex(0xF5F3EF))
     }
 
+    // MARK: App Accent
+
+    /// Warm sienna accent — replaces system blue for selection, focus, and interactive elements.
+    static let accent = Color(light: .hex(0x9B6A4A), dark: .hex(0xC8956E))
+
     // MARK: Semantic Surfaces
 
     enum Surface {
@@ -29,7 +34,7 @@ enum PlainTokens {
         static let sidebar = Color(light: .hex(0xE8E3D9), dark: .hex(0x242320))
         static let input = Color(light: .hex(0xFAF8F5), dark: .hex(0x2C2A27))
         static let hover = Color(light: .hex(0xE8E3D9), dark: .hex(0x2C2A27))
-        static let selected = Color(light: .accentDynamic(opacity: 0.12), dark: .accentDynamic(opacity: 0.18))
+        static let selected = Color(light: .hex(0x9B6A4A, opacity: 0.12), dark: .hex(0xC8956E, opacity: 0.18))
         static let toast = Color(light: .hex(0x2C2A28), dark: .hex(0xF5F3EF))
         // quickAdd uses NSVisualEffectView in code, not a token color
     }
@@ -49,15 +54,15 @@ enum PlainTokens {
         static let row = Color(light: .hex(0xDDD8CE), dark: .hex(0x383530))
         static let section = Color(light: .hex(0xCCC7BC), dark: .hex(0x4A4740))
         static let input = Color(light: .hex(0xD5D0C6), dark: .hex(0x383530))
-        static let inputFocused = Color(light: .accentDynamic(opacity: 0.60), dark: .accentDynamic(opacity: 0.60))
+        static let inputFocused = Color(light: .hex(0x9B6A4A, opacity: 0.60), dark: .hex(0xC8956E, opacity: 0.60))
     }
 
     // MARK: Selection & Focus
 
     enum Selection {
-        static let bar = Color.accentColor
-        static let bg = Color(light: .accentDynamic(opacity: 0.10), dark: .accentDynamic(opacity: 0.15))
-        static let sidebarBg = Color(light: .accentDynamic(opacity: 0.12), dark: .accentDynamic(opacity: 0.18))
+        static let bar = PlainTokens.accent
+        static let bg = Color(light: .hex(0x9B6A4A, opacity: 0.10), dark: .hex(0xC8956E, opacity: 0.15))
+        static let sidebarBg = Color(light: .hex(0x9B6A4A, opacity: 0.12), dark: .hex(0xC8956E, opacity: 0.18))
     }
 
     // MARK: Syntax Highlighting

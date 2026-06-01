@@ -27,6 +27,7 @@ private struct PlainMainWindowScene: Scene {
                 }
                 .preferredColorScheme(preferences.theme.colorScheme)
                 .environment(\.plainFontSize, preferences.fontSize)
+                .tint(PlainTokens.accent)
         }
         .commands {
             CommandGroup(replacing: .newItem) {
