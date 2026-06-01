@@ -62,6 +62,7 @@ struct PlainShellView: View {
     @State private var toastTask: Task<Void, Never>?
     @State private var scratchPadText = ""
     @State private var highlightedRowID: LineIdentity?
+    @State private var completingRowID: LineIdentity?
     @State private var columnVisibility: NavigationSplitViewVisibility = {
         if UserDefaults.standard.bool(forKey: "PlainSidebarCollapsed") {
             return .detailOnly
@@ -233,6 +234,8 @@ struct PlainShellView: View {
             if isSearchPresented {
                 searchOverlay
                     .padding(.top, 76)
+                    .transition(reduceMotion ? .opacity : .opacity.combined(with: .offset(y: -8)))
+                    .animation(reduceMotion ? nil : .easeOut(duration: Anim.fast), value: isSearchPresented)
             }
         }
         .sheet(
@@ -579,9 +582,24 @@ struct PlainShellView: View {
         HStack(spacing: Spacing.sm) {
             // Completion circle
             Button {
+                let wasCompleted = row.isCompleted
+                if !wasCompleted && !reduceMotion {
+                    completingRowID = row.id
+                    Task { @MainActor in
+                        try? await Task.sleep(for: .milliseconds(300))
+                        if completingRowID == row.id {
+                            completingRowID = nil
+                        }
+                    }
+                }
                 model.toggleCompletion(lineIdentity: row.id, undoManager: undoManager)
+                if !wasCompleted {
+                    showToast("Task completed · ")
+                }
             } label: {
                 completionCircle(row: row)
+                    .scaleEffect(completingRowID == row.id ? 1.15 : 1.0)
+                    .animation(reduceMotion ? nil : .spring(response: 0.2, dampingFraction: 0.5), value: completingRowID == row.id)
             }
             .buttonStyle(.plain)
             .disabled(!model.isEditable)
@@ -1273,13 +1291,23 @@ struct PlainShellView: View {
     }
 
     private func flashHighlight(for id: LineIdentity?) {
-        guard !reduceMotion, let id else { return }
-        highlightedRowID = id
-        Task { @MainActor in
-            try? await Task.sleep(for: .seconds(1))
-            withAnimation(.easeOut(duration: 0.3)) {
-                if highlightedRowID == id {
-                    highlightedRowID = nil
+        guard let id else { return }
+        if reduceMotion {
+            highlightedRowID = id
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(200))
+                highlightedRowID = nil
+            }
+        } else {
+            withAnimation(.easeIn(duration: 0.15)) {
+                highlightedRowID = id
+            }
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(1))
+                withAnimation(.easeOut(duration: 0.5)) {
+                    if highlightedRowID == id {
+                        highlightedRowID = nil
+                    }
                 }
             }
         }
