@@ -63,6 +63,8 @@ struct PlainShellView: View {
     @State private var scratchPadText = ""
     @State private var highlightedRowID: LineIdentity?
     @State private var completingRowID: LineIdentity?
+    @State private var contextSuggestions: [String] = []
+    @State private var contextSuggestionIndex: Int = 0
     @State private var columnVisibility: NavigationSplitViewVisibility = {
         if UserDefaults.standard.bool(forKey: "PlainSidebarCollapsed") {
             return .detailOnly
@@ -163,17 +165,6 @@ struct PlainShellView: View {
             resetDraftUI()
         }
         .toolbar {
-            ToolbarItem(placement: .navigation) {
-                Button {
-                    withAnimation {
-                        columnVisibility = columnVisibility == .detailOnly ? .all : .detailOnly
-                    }
-                } label: {
-                    Image(systemName: "sidebar.leading")
-                }
-                .help("Toggle Sidebar (⌘\\)")
-            }
-
             ToolbarItemGroup(placement: .primaryAction) {
                 Picker("Sort", selection: Binding(get: { model.sortMode }, set: { model.setSortMode($0) })) {
                     ForEach(TaskSortMode.allCases) { sortMode in
@@ -381,7 +372,34 @@ struct PlainShellView: View {
                     .accessibilityLabel("Add a task")
                     .accessibilityHint("Type a task and press Return to add it")
                     .onSubmit {
-                        submitNewTask()
+                        if !contextSuggestions.isEmpty {
+                            acceptContextSuggestion(contextSuggestions[contextSuggestionIndex])
+                        } else {
+                            submitNewTask()
+                        }
+                    }
+                    .onChange(of: newTaskText) { _, newValue in
+                        updateContextSuggestions(for: newValue)
+                    }
+                    .onKeyPress(.upArrow) {
+                        guard !contextSuggestions.isEmpty else { return .ignored }
+                        contextSuggestionIndex = max(0, contextSuggestionIndex - 1)
+                        return .handled
+                    }
+                    .onKeyPress(.downArrow) {
+                        guard !contextSuggestions.isEmpty else { return .ignored }
+                        contextSuggestionIndex = min(contextSuggestions.count - 1, contextSuggestionIndex + 1)
+                        return .handled
+                    }
+                    .onKeyPress(.tab) {
+                        guard !contextSuggestions.isEmpty else { return .ignored }
+                        acceptContextSuggestion(contextSuggestions[contextSuggestionIndex])
+                        return .handled
+                    }
+                    .onKeyPress(.escape) {
+                        guard !contextSuggestions.isEmpty else { return .ignored }
+                        contextSuggestions = []
+                        return .handled
                     }
 
                 Spacer()
@@ -418,6 +436,46 @@ struct PlainShellView: View {
             )
             .clipShape(RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
             .shadow(color: Color.black.opacity(0.06), radius: 3, x: 0, y: 1)
+            .overlay(alignment: .topLeading) {
+                if !contextSuggestions.isEmpty {
+                    VStack(alignment: .leading, spacing: 0) {
+                        ForEach(Array(contextSuggestions.enumerated()), id: \.offset) { index, suggestion in
+                            Button {
+                                acceptContextSuggestion(suggestion)
+                            } label: {
+                                HStack {
+                                    Text("@\(suggestion)")
+                                        .font(PlainType.taskBody)
+                                        .foregroundStyle(PlainTokens.Syntax.context)
+                                    Spacer()
+                                    if index < 3 && isRecentContext(suggestion) {
+                                        Text("recent")
+                                            .font(PlainType.taskMeta)
+                                            .foregroundStyle(PlainTokens.TextToken.muted)
+                                    }
+                                }
+                                .padding(.horizontal, Spacing.lg)
+                                .padding(.vertical, Spacing.md)
+                                .background(index == contextSuggestionIndex ? PlainTokens.Surface.hover : Color.clear)
+                            }
+                            .buttonStyle(.plain)
+                            if index < contextSuggestions.count - 1 {
+                                Divider()
+                            }
+                        }
+                    }
+                    .background(PlainTokens.Surface.input)
+                    .clipShape(RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Radius.md, style: .continuous)
+                            .stroke(PlainTokens.Border.input, lineWidth: 1)
+                    )
+                    .shadow(color: Color.black.opacity(0.1), radius: 6, x: 0, y: 3)
+                    .frame(maxWidth: 260)
+                    .offset(y: Measurement.inputBarHeight + 4)
+                    .zIndex(100)
+                }
+            }
             .padding(.horizontal, Spacing.xl)
             .padding(.top, Spacing.xl)
 
@@ -601,7 +659,7 @@ struct PlainShellView: View {
                     .scaleEffect(completingRowID == row.id ? 1.15 : 1.0)
                     .animation(reduceMotion ? nil : .spring(response: 0.2, dampingFraction: 0.5), value: completingRowID == row.id)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.borderless)
             .disabled(!model.isEditable)
             .accessibilityLabel(row.isCompleted ? "Mark incomplete" : "Mark complete")
 
@@ -1285,9 +1343,105 @@ struct PlainShellView: View {
     private func submitNewTask() {
         let text = newTaskText
         guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        trackRecentContexts(in: text)
         model.addTask(rawText: text, undoManager: undoManager)
         newTaskText = ""
+        contextSuggestions = []
         flashHighlight(for: model.selectedRowID)
+    }
+
+    // MARK: - Context Autocomplete
+
+    private static let recentContextsKey = "PlainRecentContexts"
+    private static let maxRecentContexts = 10
+
+    private func updateContextSuggestions(for text: String) {
+        guard let atRange = findActiveAtToken(in: text) else {
+            contextSuggestions = []
+            return
+        }
+
+        let partial = String(text[atRange]).lowercased()
+        let allContexts = model.contextCounts.map(\.name)
+        guard !allContexts.isEmpty else {
+            contextSuggestions = []
+            return
+        }
+
+        let recentContexts = UserDefaults.standard.stringArray(forKey: Self.recentContextsKey) ?? []
+
+        // Filter by partial match
+        let matching: [String]
+        if partial.isEmpty {
+            matching = allContexts
+        } else {
+            matching = allContexts.filter { $0.lowercased().hasPrefix(partial) }
+        }
+
+        guard !matching.isEmpty else {
+            contextSuggestions = []
+            return
+        }
+
+        // Build ordered list: up to 3 recent first, then remaining alpha
+        let matchingSet = Set(matching)
+        let recentMatching = recentContexts.filter { matchingSet.contains($0) }
+        let topRecent = Array(recentMatching.prefix(3))
+        let topRecentSet = Set(topRecent)
+        let remaining = matching.filter { !topRecentSet.contains($0) }.sorted()
+
+        contextSuggestions = topRecent + remaining
+        contextSuggestionIndex = 0
+    }
+
+    private func findActiveAtToken(in text: String) -> Range<String.Index>? {
+        // Find the last '@' that's either at the start or preceded by a space
+        guard let atIndex = text.lastIndex(of: "@") else { return nil }
+        let isAtStart = atIndex == text.startIndex
+        let precededBySpace = !isAtStart && text[text.index(before: atIndex)] == " "
+        guard isAtStart || precededBySpace else { return nil }
+
+        let afterAt = text.index(after: atIndex)
+        // If there's a space after the partial, the token is closed
+        let rest = text[afterAt...]
+        if rest.contains(" ") { return nil }
+
+        return afterAt..<text.endIndex
+    }
+
+    private func acceptContextSuggestion(_ context: String) {
+        guard let atRange = findActiveAtToken(in: newTaskText) else { return }
+        let atIndex = newTaskText.index(before: atRange.lowerBound) // the '@' character
+        let before = newTaskText[newTaskText.startIndex..<atIndex]
+        newTaskText = before + "@\(context) "
+        contextSuggestions = []
+    }
+
+    private func isRecentContext(_ context: String) -> Bool {
+        let recent = UserDefaults.standard.stringArray(forKey: Self.recentContextsKey) ?? []
+        return recent.prefix(3).contains(context)
+    }
+
+    private func trackRecentContexts(in text: String) {
+        // Extract all @context tokens from the submitted text
+        let words = text.split(separator: " ")
+        let contexts = words.compactMap { word -> String? in
+            guard word.hasPrefix("@"), word.count > 1 else { return nil }
+            return String(word.dropFirst())
+        }
+        guard !contexts.isEmpty else { return }
+
+        var recent = UserDefaults.standard.stringArray(forKey: Self.recentContextsKey) ?? []
+        // Prepend new contexts (most recent first), removing duplicates
+        for context in contexts.reversed() {
+            recent.removeAll { $0 == context }
+            recent.insert(context, at: 0)
+        }
+        // Trim to max
+        if recent.count > Self.maxRecentContexts {
+            recent = Array(recent.prefix(Self.maxRecentContexts))
+        }
+        UserDefaults.standard.set(recent, forKey: Self.recentContextsKey)
     }
 
     private func flashHighlight(for id: LineIdentity?) {
