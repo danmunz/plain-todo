@@ -1867,13 +1867,13 @@ private struct TaskActionBar: View {
                     performAction(action)
                 } label: {
                     Image(systemName: action.icon)
-                        .font(.system(size: 11, weight: isHovered ? .semibold : .regular))
+                        .font(.system(size: 14, weight: isHovered ? .semibold : .regular))
                         .foregroundStyle(
                             isDisabled ? action.tint.opacity(Opacity.disabledControl)
                             : isHovered ? action.tint
                             : PlainTokens.TextToken.muted
                         )
-                        .frame(width: 24, height: 24)
+                        .frame(width: 40, height: 40)
                         .background {
                             Circle()
                                 .fill(isHovered ? action.tint.opacity(0.12) : Color.clear)
@@ -1884,7 +1884,7 @@ private struct TaskActionBar: View {
                 .buttonStyle(.plain)
                 .disabled(isDisabled)
                 .onHover { over in
-                    withAnimation(.spring(response: 0.25, dampingFraction: 0.7)) {
+                    withAnimation(.spring(response: 0.18, dampingFraction: 0.75)) {
                         hoveredAction = over ? action : nil
                     }
                 }
