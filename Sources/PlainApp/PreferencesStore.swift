@@ -232,7 +232,7 @@ private struct GeneralPreferencesTab: View {
                 Text("C").tag("C")
             }
         }
-        .padding(20)
+        .padding(Spacing.xxl)
     }
 }
 
@@ -255,7 +255,7 @@ private struct AppearancePreferencesTab: View {
 
             Toggle("Show completed tasks in list", isOn: $preferences.showCompletedTasks)
         }
-        .padding(20)
+        .padding(Spacing.xxl)
     }
 }
 
@@ -307,7 +307,7 @@ private struct ShortcutsPreferencesTab: View {
                 }
             }
         }
-        .padding(20)
+        .padding(Spacing.xxl)
     }
 }
 
@@ -325,6 +325,6 @@ private struct AdvancedPreferencesTab: View {
 
             Toggle("Enable debug logging", isOn: $preferences.debugLogging)
         }
-        .padding(20)
+        .padding(Spacing.xxl)
     }
 }

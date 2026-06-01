@@ -364,7 +364,7 @@ struct PlainShellView: View {
             HStack(spacing: Spacing.sm) {
                 Image(systemName: "plus")
                     .foregroundStyle(PlainTokens.TextToken.muted)
-                    .font(.system(size: 14))
+                    .font(PlainType.iconMedium)
 
                 TextField("Add a task...", text: $newTaskText)
                     .textFieldStyle(.plain)
@@ -442,7 +442,7 @@ struct PlainShellView: View {
                     .stroke(focusedField == .newTask ? PlainTokens.Border.inputFocused : PlainTokens.Border.input, lineWidth: focusedField == .newTask ? 2 : 1)
             )
             .clipShape(RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
-            .shadow(color: Color.black.opacity(0.06), radius: 3, x: 0, y: 1)
+            .shadow(color: Color.black.opacity(0.04), radius: 2, x: 0, y: 1)
             .overlay(alignment: .topLeading) {
                 if !autocompleteSuggestions.isEmpty {
                     let prefix = autocompletePrefix.map(String.init) ?? ""
@@ -739,7 +739,7 @@ struct PlainShellView: View {
             } label: {
                 completionCircle(row: row)
                     .scaleEffect(completingRowID == row.id ? 1.15 : 1.0)
-                    .animation(reduceMotion ? nil : .spring(response: 0.2, dampingFraction: 0.5), value: completingRowID == row.id)
+                    .animation(reduceMotion ? nil : Anim.completionCircle, value: completingRowID == row.id)
             }
             .buttonStyle(.borderless)
             .disabled(!model.isEditable)
@@ -835,7 +835,7 @@ struct PlainShellView: View {
                 } label: {
                     Image(systemName: "ellipsis")
                         .foregroundStyle(PlainTokens.TextToken.secondary)
-                        .font(.system(size: 14))
+                        .font(PlainType.iconMedium)
                 }
                 .opacity(hoveredRowID == row.id ? Opacity.hoverMenu : 0.0)
                 .animation(.easeOut(duration: Anim.fast), value: hoveredRowID == row.id)
@@ -849,7 +849,7 @@ struct PlainShellView: View {
         }
         .background {
             if highlightedRowID == row.id {
-                Color.accentColor.opacity(0.08)
+                Color.accentColor.opacity(Opacity.highlightRow)
             } else if hoveredRowID == row.id {
                 PlainTokens.Surface.hover
             }
@@ -911,13 +911,13 @@ struct PlainShellView: View {
                     .fill(PlainTokens.Status.completed)
                     .frame(width: Measurement.completionCircleDiameter, height: Measurement.completionCircleDiameter)
                 Image(systemName: "checkmark")
-                    .font(.system(size: 11, weight: .bold))
+                    .font(PlainType.iconSmall)
                     .foregroundStyle(PlainTokens.TextToken.inverse)
             } else {
                 Circle()
                     .stroke(
                         row.priority != nil ? priorityColor(row.priority!) : PlainTokens.TextToken.muted,
-                        lineWidth: 2.0
+                        lineWidth: Measurement.rowSeparatorThickness * 4
                     )
                     .frame(width: Measurement.completionCircleDiameter, height: Measurement.completionCircleDiameter)
             }
@@ -944,13 +944,13 @@ struct PlainShellView: View {
                 }
                 .accessibilityIdentifier("plain.done.back")
             }
-            .padding(.horizontal, 20)
-            .padding(.top, 20)
+            .padding(.horizontal, Spacing.xxl)
+            .padding(.top, Spacing.xxl)
 
             if model.hasActiveSearch && !isSearchPresented {
                 searchFilterPill
-                    .padding(.horizontal, 20)
-                    .padding(.top, 12)
+                    .padding(.horizontal, Spacing.xxl)
+                    .padding(.top, Spacing.lg)
             }
 
             List(model.visibleRows) { row in
@@ -960,7 +960,7 @@ struct PlainShellView: View {
                             .fill(PlainTokens.Status.completed)
                             .frame(width: Measurement.completionCircleDiameter, height: Measurement.completionCircleDiameter)
                         Image(systemName: "checkmark")
-                            .font(.system(size: 10, weight: .bold))
+                            .font(PlainType.iconSmall)
                             .foregroundStyle(PlainTokens.TextToken.inverse)
                     }
 
@@ -1101,7 +1101,7 @@ struct PlainShellView: View {
         HStack(spacing: Spacing.lg) {
             Image(systemName: "exclamationmark.triangle.fill")
                 .foregroundStyle(PlainTokens.Status.conflict)
-                .font(.system(size: 14))
+                .font(PlainType.iconMedium)
 
             Text(model.externalTodoConflictMessage)
                 .font(PlainType.taskBody)
@@ -1137,7 +1137,7 @@ struct PlainShellView: View {
         }
         .padding(.horizontal, Spacing.xl)
         .padding(.vertical, Spacing.md)
-        .background(PlainTokens.Status.conflict.opacity(0.10))
+        .background(PlainTokens.Status.conflict.opacity(Opacity.bannerBg))
         .clipShape(RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
         .accessibilityIdentifier("plain.conflict.banner")
     }
@@ -1337,7 +1337,7 @@ struct PlainShellView: View {
         HStack(spacing: Spacing.lg) {
             Image(systemName: "magnifyingglass")
                 .foregroundStyle(PlainTokens.TextToken.muted)
-                .font(.system(size: 16, weight: .medium))
+                .font(PlainType.iconLarge)
 
             TextField("Search tasks", text: $searchText)
                 .textFieldStyle(.plain)
@@ -1365,7 +1365,7 @@ struct PlainShellView: View {
             RoundedRectangle(cornerRadius: Radius.lg, style: .continuous)
                 .stroke(PlainTokens.Border.input, lineWidth: 1)
         )
-        .shadow(color: Color.black.opacity(0.12), radius: 20, x: 0, y: 8)
+        .shadow(color: Color.black.opacity(0.10), radius: 16, x: 0, y: 6)
         .padding(.horizontal, Spacing.xxl)
         .onAppear {
             DispatchQueue.main.async {
@@ -1683,7 +1683,7 @@ private struct ConflictDiffSheet: View {
                 .keyboardShortcut(.defaultAction)
             }
         }
-        .padding(20)
+        .padding(Spacing.xxl)
         .frame(minWidth: 880, minHeight: 520)
         .accessibilityIdentifier("plain.conflict.diffSheet")
     }
@@ -1748,8 +1748,8 @@ private struct HighlightedText: View {
             .foregroundStyle(foregroundStyle)
             .strikethrough(strikethrough)
             .padding(.horizontal, highlighted ? 2 : 0)
-            .background(highlighted ? Color.yellow.opacity(0.28) : Color.clear)
-            .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
+            .background(highlighted ? PlainTokens.Search.highlight : Color.clear)
+            .clipShape(RoundedRectangle(cornerRadius: Radius.sm, style: .continuous))
     }
 }
 
@@ -1800,8 +1800,8 @@ private struct SyntaxHighlightedText: View {
             .strikethrough(strikethrough)
             .italic(strikethrough)
             .padding(.horizontal, highlighted ? 2 : 0)
-            .background(highlighted ? Color.yellow.opacity(0.28) : Color.clear)
-            .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
+            .background(highlighted ? PlainTokens.Search.highlight : Color.clear)
+            .clipShape(RoundedRectangle(cornerRadius: Radius.sm, style: .continuous))
     }
 
     private func coloredAttributedString(_ segment: String) -> AttributedString {
@@ -1889,7 +1889,7 @@ private struct PlaceholderCard: View {
     var body: some View {
         VStack(spacing: Spacing.lg) {
             Image(systemName: systemImage)
-                .font(.system(size: 24))
+                .font(.system(size: 24, weight: .light))
                 .foregroundStyle(PlainTokens.TextToken.muted)
 
             Text(title)

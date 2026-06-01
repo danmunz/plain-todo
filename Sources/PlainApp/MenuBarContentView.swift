@@ -49,7 +49,7 @@ struct MenuBarContentView: View {
             }
             .accessibilityLabel("Open Main Window")
         }
-        .padding(12)
+        .padding(Spacing.lg)
         .frame(width: 260)
         .onAppear {
             model.loadInitialSnapshotIfNeeded()

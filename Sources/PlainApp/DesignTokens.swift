@@ -93,6 +93,12 @@ enum PlainTokens {
         static let success = Syntax.project
         static let destructive = Priority.a
     }
+
+    // MARK: Search
+
+    enum Search {
+        static let highlight = Color(light: .hex(0xC99D45, opacity: 0.25), dark: .hex(0xDAA832, opacity: 0.30))
+    }
 }
 
 // MARK: - Typography Tokens
@@ -121,6 +127,11 @@ enum PlainType {
     static let emptyState = Font.system(size: 15, weight: .regular, design: .serif).italic()
     static let onboardingHeading = Font.system(size: 32, weight: .regular, design: .serif)
     static let onboardingBody = Font.system(size: 14, weight: .regular, design: .serif)
+
+    // -- Icons (sans, sized for SF Symbols) --
+    static let iconSmall = Font.system(size: 11, weight: .bold)
+    static let iconMedium = Font.system(size: 14)
+    static let iconLarge = Font.system(size: 16, weight: .medium)
 
     /// Returns a scaled taskBody font at the user's chosen size.
     static func taskBody(size: Double) -> Font {
@@ -151,7 +162,7 @@ enum Spacing {
     static let md: CGFloat = 8
     static let lg: CGFloat = 12
     static let xl: CGFloat = 16
-    static let xxl: CGFloat = 24
+    static let xxl: CGFloat = 20
     static let xxxl: CGFloat = 32
 }
 
@@ -231,6 +242,8 @@ enum Opacity {
     static let disabledControl: Double = 0.4
     static let dragPlaceholder: Double = 0.3
     static let searchDimmed: Double = 0.35
+    static let highlightRow: Double = 0.08
+    static let bannerBg: Double = 0.10
 }
 
 // MARK: - Animation Tokens

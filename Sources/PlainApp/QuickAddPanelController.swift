@@ -212,7 +212,7 @@ private struct QuickAddPanelView: View {
                     .foregroundStyle(PlainTokens.TextToken.muted)
                     .padding(.horizontal, Spacing.sm)
                     .padding(.vertical, Spacing.xs)
-                    .background(RoundedRectangle(cornerRadius: Radius.sm, style: .continuous).fill(Color.primary.opacity(0.06)))
+                    .background(RoundedRectangle(cornerRadius: Radius.sm, style: .continuous).fill(PlainTokens.Surface.hover))
             }
 
             TextField("Capture a task...", text: $controller.inputText)
