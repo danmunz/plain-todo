@@ -117,6 +117,9 @@ struct PlainShellView: View {
                     SidebarSectionHeader("ARCHIVE")
                 }
             }
+            .scrollContentBackground(.hidden)
+            .background(PlainTokens.Surface.sidebar)
+            .listStyle(.sidebar)
             .accessibilityIdentifier("plain.sidebar")
             .navigationSplitViewColumnWidth(min: 220, ideal: 240)
         } detail: {
@@ -382,14 +385,15 @@ struct PlainShellView: View {
                 }
             }
             .padding(.horizontal, Spacing.xl)
-            .padding(.vertical, Spacing.md)
+            .padding(.vertical, Spacing.lg)
             .frame(height: Measurement.inputBarHeight)
             .background(PlainTokens.Surface.input)
             .overlay(
                 RoundedRectangle(cornerRadius: Radius.md, style: .continuous)
-                    .stroke(focusedField == .newTask ? PlainTokens.Border.inputFocused : PlainTokens.Border.input, lineWidth: 1)
+                    .stroke(focusedField == .newTask ? PlainTokens.Border.inputFocused : PlainTokens.Border.input, lineWidth: focusedField == .newTask ? 2 : 1)
             )
             .clipShape(RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
+            .shadow(color: Color.black.opacity(0.06), radius: 3, x: 0, y: 1)
             .padding(.horizontal, Spacing.xl)
             .padding(.top, Spacing.xl)
 
@@ -452,6 +456,8 @@ struct PlainShellView: View {
                 }
             }
             .listStyle(.inset)
+            .scrollContentBackground(.hidden)
+            .background(PlainTokens.Surface.canvas)
             .onMoveCommand { direction in
                 switch direction {
                 case .down:
@@ -725,13 +731,13 @@ struct PlainShellView: View {
                     .fill(PlainTokens.Status.completed)
                     .frame(width: Measurement.completionCircleDiameter, height: Measurement.completionCircleDiameter)
                 Image(systemName: "checkmark")
-                    .font(.system(size: 10, weight: .bold))
+                    .font(.system(size: 11, weight: .bold))
                     .foregroundStyle(PlainTokens.TextToken.inverse)
             } else {
                 Circle()
                     .stroke(
                         row.priority != nil ? priorityColor(row.priority!) : PlainTokens.TextToken.muted,
-                        lineWidth: 1.5
+                        lineWidth: 2.0
                     )
                     .frame(width: Measurement.completionCircleDiameter, height: Measurement.completionCircleDiameter)
             }
@@ -807,6 +813,8 @@ struct PlainShellView: View {
                 .opacity(Opacity.completedRow)
             }
             .listStyle(.inset)
+            .scrollContentBackground(.hidden)
+            .background(PlainTokens.Surface.canvas)
             .accessibilityIdentifier("plain.done.list")
             .onExitCommand {
                 if isSearchPresented || focusedField == .search {
@@ -1483,10 +1491,10 @@ private struct GroupHeader: View {
             Text(title.uppercased())
                 .font(PlainType.groupHeader)
                 .tracking(Tracking.groupHeader)
-                .foregroundStyle(PlainTokens.TextToken.secondary)
+                .foregroundStyle(PlainTokens.Syntax.project)
             Rectangle()
-                .fill(PlainTokens.Border.row)
-                .frame(height: Measurement.rowSeparatorThickness)
+                .fill(PlainTokens.Border.section)
+                .frame(height: 1)
         }
         .frame(height: Measurement.groupHeaderHeight)
         .textCase(nil)
@@ -1547,7 +1555,7 @@ private struct SidebarSectionHeader: View {
         Text(text)
             .font(PlainType.sidebarSection)
             .tracking(Tracking.sidebarSection)
-            .foregroundStyle(PlainTokens.TextToken.muted)
+            .foregroundStyle(PlainTokens.Syntax.project)
     }
 }
 
