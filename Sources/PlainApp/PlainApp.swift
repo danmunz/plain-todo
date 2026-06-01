@@ -262,10 +262,10 @@ struct PlainShellView: View {
     }
 
     private var onboardingView: some View {
-        VStack(spacing: Spacing.xxl) {
+        VStack(spacing: Spacing.xxxl) {
             Spacer()
 
-            VStack(spacing: Spacing.lg) {
+            VStack(spacing: Spacing.xl) {
                 Text("plain")
                     .font(PlainType.onboardingHeading)
                     .tracking(Tracking.onboardingHeading)
@@ -275,7 +275,7 @@ struct PlainShellView: View {
                     .font(PlainType.onboardingBody)
                     .foregroundStyle(PlainTokens.TextToken.secondary)
                     .multilineTextAlignment(.center)
-                    .lineSpacing(4)
+                    .lineSpacing(6)
             }
 
             VStack(spacing: Spacing.lg) {
@@ -691,7 +691,7 @@ struct PlainShellView: View {
                     .foregroundStyle(PlainTokens.TextToken.inverse)
                     .padding(.horizontal, Spacing.xl)
                     .padding(.vertical, Spacing.md)
-                    .background(PlainTokens.Surface.toast, in: RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
+                    .background(PlainTokens.Surface.toast, in: Capsule())
                     .shadow(color: Color(hex: 0x2C2A28, opacity: 0.12), radius: PlainShadow.toastRadius, x: 0, y: PlainShadow.toastY)
                     .padding(.bottom, Spacing.xl)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
@@ -887,9 +887,10 @@ struct PlainShellView: View {
         .animation(reduceMotion ? nil : .easeInOut(duration: Anim.normal), value: row.isCompleted)
         .overlay(alignment: .leading) {
             if model.selectedRowIDs.contains(row.id) {
-                Rectangle()
+                RoundedRectangle(cornerRadius: Measurement.selectionBarWidth / 2, style: .continuous)
                     .fill(PlainTokens.Selection.bar)
                     .frame(width: Measurement.selectionBarWidth)
+                    .padding(.vertical, Spacing.sm)
             }
         }
         .accessibilityElement(children: .combine)
@@ -917,7 +918,7 @@ struct PlainShellView: View {
                 Circle()
                     .stroke(
                         row.priority != nil ? priorityColor(row.priority!) : PlainTokens.TextToken.muted,
-                        lineWidth: Measurement.rowSeparatorThickness * 4
+                        lineWidth: 1.5
                     )
                     .frame(width: Measurement.completionCircleDiameter, height: Measurement.completionCircleDiameter)
             }
@@ -1867,7 +1868,13 @@ private struct GroupHeader: View {
                 .tracking(Tracking.groupHeader)
                 .foregroundStyle(PlainTokens.Syntax.project)
             Rectangle()
-                .fill(PlainTokens.Border.section)
+                .fill(
+                    LinearGradient(
+                        colors: [PlainTokens.Border.section, PlainTokens.Border.section.opacity(0)],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
                 .frame(height: 1)
         }
         .frame(height: Measurement.groupHeaderHeight)
@@ -1889,7 +1896,7 @@ private struct PlaceholderCard: View {
     var body: some View {
         VStack(spacing: Spacing.lg) {
             Image(systemName: systemImage)
-                .font(.system(size: 24, weight: .light))
+                .font(.system(size: 32, weight: .ultraLight))
                 .foregroundStyle(PlainTokens.TextToken.muted)
 
             Text(title)
@@ -1944,9 +1951,18 @@ private struct SidebarRow: View {
             Text(title)
                 .font(PlainType.sidebarLabel)
             Spacer()
-            Text("\(count)")
-                .font(PlainType.sidebarCount)
-                .foregroundStyle(isOverdue ? PlainTokens.Status.overdue : PlainTokens.TextToken.muted)
+            if isOverdue && count > 0 {
+                Text("\(count)")
+                    .font(PlainType.sidebarCount)
+                    .foregroundStyle(PlainTokens.TextToken.inverse)
+                    .padding(.horizontal, Spacing.sm + 2)
+                    .padding(.vertical, 1)
+                    .background(PlainTokens.Status.overdue, in: Capsule())
+            } else {
+                Text("\(count)")
+                    .font(PlainType.sidebarCount)
+                    .foregroundStyle(PlainTokens.TextToken.muted)
+            }
         }
         .frame(height: Measurement.sidebarItemHeight)
         .accessibilityElement(children: .ignore)

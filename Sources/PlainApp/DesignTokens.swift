@@ -63,8 +63,8 @@ enum PlainTokens {
     // MARK: Syntax Highlighting
 
     enum Syntax {
-        static let project = Color(light: .hex(0x1D7A68), dark: .hex(0x5BB8A6))
-        static let context = Color(light: .hex(0x6B4C9A), dark: .hex(0xA98BD4))
+        static let project = Color(light: .hex(0x147A64), dark: .hex(0x4DD4AF))
+        static let context = Color(light: .hex(0x6241A0), dark: .hex(0xB598E8))
         static let keyValue = Color(light: .hex(0x7A7670), dark: .hex(0x858179))
         static let date = Color(light: .hex(0x7A7670), dark: .hex(0x858179))
     }
@@ -72,15 +72,15 @@ enum PlainTokens {
     // MARK: Priority Colors
 
     enum Priority {
-        static let a = Color(light: .hex(0xBF3520), dark: .hex(0xE8715C))
+        static let a = Color(light: .hex(0xC42B18), dark: .hex(0xF06950))
         static let b = Color(light: .hex(0xAA7D00), dark: .hex(0xDAA832))
-        static let c = Color(light: .hex(0x3D6FA0), dark: .hex(0x6FA8DC))
+        static let c = Color(light: .hex(0x2E6BA4), dark: .hex(0x6FA8DC))
         static let low = Gray.g400
 
-        static let aBg = Color(light: .hex(0xBF3520, opacity: 0.14), dark: .hex(0xE8715C, opacity: 0.16))
-        static let bBg = Color(light: .hex(0xAA7D00, opacity: 0.14), dark: .hex(0xDAA832, opacity: 0.16))
-        static let cBg = Color(light: .hex(0x3D6FA0, opacity: 0.14), dark: .hex(0x6FA8DC, opacity: 0.16))
-        static let lowBg = Color(light: .hex(0xD1CDC4, opacity: 0.40), dark: .hex(0x4A4740, opacity: 0.40))
+        static let aBg = Color(light: .hex(0xC42B18, opacity: 0.12), dark: .hex(0xF06950, opacity: 0.14))
+        static let bBg = Color(light: .hex(0xAA7D00, opacity: 0.12), dark: .hex(0xDAA832, opacity: 0.14))
+        static let cBg = Color(light: .hex(0x2E6BA4, opacity: 0.12), dark: .hex(0x6FA8DC, opacity: 0.14))
+        static let lowBg = Color(light: .hex(0xD1CDC4, opacity: 0.30), dark: .hex(0x4A4740, opacity: 0.30))
     }
 
     // MARK: Status & Feedback
@@ -88,7 +88,7 @@ enum PlainTokens {
     enum Status {
         static let overdue = Priority.a
         static let today = Syntax.project
-        static let completed = Gray.g400
+        static let completed = Color(light: .hex(0x147A64), dark: .hex(0x4DD4AF))
         static let conflict = Priority.b
         static let success = Syntax.project
         static let destructive = Priority.a
@@ -109,7 +109,7 @@ enum PlainType {
     static let sidebarSection = Font.system(size: 10, weight: .heavy)
     static let sidebarLabel = Font.system(size: 13, weight: .medium)
     static let sidebarCount = Font.system(size: 12, weight: .regular)
-    static let groupHeader = Font.system(size: 10, weight: .heavy)
+    static let groupHeader = Font.system(size: 11, weight: .heavy)
     static let priorityBadge = Font.system(size: 11, weight: .bold)
     static let inputHint = Font.system(size: 11, weight: .regular)
     static let statusBar = Font.system(size: 11, weight: .regular)
@@ -125,7 +125,7 @@ enum PlainType {
     static let inputPlaceholder = Font.system(size: 14, weight: .regular, design: .serif).italic()
     static let toastMessage = Font.system(size: 12, weight: .medium, design: .serif).italic()
     static let emptyState = Font.system(size: 15, weight: .regular, design: .serif).italic()
-    static let onboardingHeading = Font.system(size: 32, weight: .regular, design: .serif)
+    static let onboardingHeading = Font.system(size: 44, weight: .light, design: .serif)
     static let onboardingBody = Font.system(size: 14, weight: .regular, design: .serif)
 
     // -- Icons (sans, sized for SF Symbols) --
@@ -175,9 +175,9 @@ enum Measurement {
     static let taskRowMinHeight: CGFloat = 44
     static let inputBarHeight: CGFloat = 48
     static let statusBarHeight: CGFloat = 28
-    static let completionCircleDiameter: CGFloat = 20
+    static let completionCircleDiameter: CGFloat = 18
     static let priorityBadgeHeight: CGFloat = 22
-    static let selectionBarWidth: CGFloat = 4
+    static let selectionBarWidth: CGFloat = 3
     static let groupHeaderHeight: CGFloat = 28
     static let sidebarItemHeight: CGFloat = 28
     static let rowSeparatorThickness: CGFloat = 0.5
@@ -297,7 +297,7 @@ enum Anim {
 enum Tracking {
     static let sidebarSection: CGFloat = 2.0
     static let groupHeader: CGFloat = 1.5
-    static let onboardingHeading: CGFloat = -0.3
+    static let onboardingHeading: CGFloat = -0.8
 }
 
 // MARK: - Color Helpers
