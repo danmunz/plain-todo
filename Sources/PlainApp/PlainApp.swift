@@ -818,51 +818,24 @@ struct PlainShellView: View {
                     }
                 }
 
-                // Hover menu
-                Menu {
-                    Button("Edit") {
-                        startInlineEdit(for: row)
-                    }
-                    Divider()
-                    Button("Priority A") {
-                        model.setPriority("A", lineIdentity: row.id, undoManager: undoManager)
-                    }
-                    Button("Priority B") {
-                        model.setPriority("B", lineIdentity: row.id, undoManager: undoManager)
-                    }
-                    Button("Priority C") {
-                        model.setPriority("C", lineIdentity: row.id, undoManager: undoManager)
-                    }
-                    Button("Clear Priority") {
-                        model.setPriority(nil, lineIdentity: row.id, undoManager: undoManager)
-                    }
-                    Divider()
-                    Button("Delete", role: .destructive) {
-                        model.deleteRow(lineIdentity: row.id, undoManager: undoManager)
-                    }
-                    Divider()
-                    Button("Move Up") {
-                        model.moveRow(lineIdentity: row.id, by: -1, undoManager: undoManager)
-                    }
-                    .disabled(!model.canMove(lineIdentity: row.id, by: -1))
-                    Button("Move Down") {
-                        model.moveRow(lineIdentity: row.id, by: 1, undoManager: undoManager)
-                    }
-                    .disabled(!model.canMove(lineIdentity: row.id, by: 1))
-                } label: {
-                    Image(systemName: "ellipsis")
-                        .foregroundStyle(PlainTokens.TextToken.secondary)
-                        .font(PlainType.iconMedium)
+                // Inline action buttons
+                if hoveredRowID == row.id && model.isEditable {
+                    TaskActionBar(
+                        row: row,
+                        model: model,
+                        undoManager: undoManager,
+                        onEdit: { startInlineEdit(for: row) }
+                    )
+                    .transition(.opacity.combined(with: .scale(scale: 0.92, anchor: .trailing)))
                 }
-                .opacity(hoveredRowID == row.id ? Opacity.hoverMenu : 0.0)
-                .animation(.easeOut(duration: Anim.fast), value: hoveredRowID == row.id)
-                .disabled(!model.isEditable)
             }
         }
         .padding(.horizontal, Spacing.xl)
         .frame(minHeight: Measurement.taskRowMinHeight)
         .onHover { isHovered in
-            hoveredRowID = isHovered ? row.id : nil
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+                hoveredRowID = isHovered ? row.id : nil
+            }
         }
         .background {
             if highlightedRowID == row.id {
@@ -1827,6 +1800,126 @@ private func priorityBgColor(_ priority: String) -> Color {
     case "B": return PlainTokens.Priority.bBg
     case "C": return PlainTokens.Priority.cBg
     default: return PlainTokens.Priority.lowBg
+    }
+}
+
+// MARK: - Task Action Bar
+
+private struct TaskActionBar: View {
+    let row: PlainShellModel.Row
+    let model: PlainShellModel
+    let undoManager: UndoManager?
+    let onEdit: () -> Void
+
+    @State private var hoveredAction: TaskAction?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private enum TaskAction: String, CaseIterable {
+        case edit, priA, priB, priC, priClear, moveUp, moveDown, delete
+
+        var icon: String {
+            switch self {
+            case .edit:     return "pencil"
+            case .priA:     return "a.circle.fill"
+            case .priB:     return "b.circle.fill"
+            case .priC:     return "c.circle.fill"
+            case .priClear: return "minus.circle"
+            case .moveUp:   return "chevron.up"
+            case .moveDown: return "chevron.down"
+            case .delete:   return "trash"
+            }
+        }
+
+        var label: String {
+            switch self {
+            case .edit:     return "Edit"
+            case .priA:     return "Priority A"
+            case .priB:     return "Priority B"
+            case .priC:     return "Priority C"
+            case .priClear: return "Clear Priority"
+            case .moveUp:   return "Move Up"
+            case .moveDown: return "Move Down"
+            case .delete:   return "Delete"
+            }
+        }
+
+        var tint: Color {
+            switch self {
+            case .edit:     return PlainTokens.TextToken.secondary
+            case .priA:     return PlainTokens.Priority.a
+            case .priB:     return PlainTokens.Priority.b
+            case .priC:     return PlainTokens.Priority.c
+            case .priClear: return PlainTokens.Gray.g400
+            case .moveUp:   return PlainTokens.TextToken.secondary
+            case .moveDown: return PlainTokens.TextToken.secondary
+            case .delete:   return PlainTokens.Status.destructive
+            }
+        }
+    }
+
+    var body: some View {
+        HStack(spacing: 2) {
+            ForEach(Array(TaskAction.allCases.enumerated()), id: \.element) { index, action in
+                let isHovered = hoveredAction == action
+                let isDisabled = actionDisabled(action)
+
+                Button {
+                    performAction(action)
+                } label: {
+                    Image(systemName: action.icon)
+                        .font(.system(size: 11, weight: isHovered ? .semibold : .regular))
+                        .foregroundStyle(
+                            isDisabled ? action.tint.opacity(Opacity.disabledControl)
+                            : isHovered ? action.tint
+                            : PlainTokens.TextToken.muted
+                        )
+                        .frame(width: 24, height: 24)
+                        .background {
+                            Circle()
+                                .fill(isHovered ? action.tint.opacity(0.12) : Color.clear)
+                                .scaleEffect(isHovered ? 1.0 : 0.6)
+                        }
+                        .scaleEffect(isHovered ? 1.12 : 1.0)
+                }
+                .buttonStyle(.plain)
+                .disabled(isDisabled)
+                .onHover { over in
+                    withAnimation(.spring(response: 0.25, dampingFraction: 0.7)) {
+                        hoveredAction = over ? action : nil
+                    }
+                }
+                .help(action.label)
+                .accessibilityLabel(action.label)
+            }
+        }
+        .padding(.horizontal, 4)
+        .padding(.vertical, 2)
+        .background {
+            Capsule()
+                .fill(PlainTokens.Surface.canvas.opacity(0.85))
+                .shadow(color: .black.opacity(0.06), radius: 3, y: 1)
+        }
+    }
+
+    private func actionDisabled(_ action: TaskAction) -> Bool {
+        switch action {
+        case .moveUp: return !model.canMove(lineIdentity: row.id, by: -1)
+        case .moveDown: return !model.canMove(lineIdentity: row.id, by: 1)
+        default: return false
+        }
+    }
+
+    private func performAction(_ action: TaskAction) {
+        switch action {
+        case .edit:     onEdit()
+        case .priA:     model.setPriority("A", lineIdentity: row.id, undoManager: undoManager)
+        case .priB:     model.setPriority("B", lineIdentity: row.id, undoManager: undoManager)
+        case .priC:     model.setPriority("C", lineIdentity: row.id, undoManager: undoManager)
+        case .priClear: model.setPriority(nil, lineIdentity: row.id, undoManager: undoManager)
+        case .moveUp:   model.moveRow(lineIdentity: row.id, by: -1, undoManager: undoManager)
+        case .moveDown: model.moveRow(lineIdentity: row.id, by: 1, undoManager: undoManager)
+        case .delete:   model.deleteRow(lineIdentity: row.id, undoManager: undoManager)
+        }
     }
 }
 
