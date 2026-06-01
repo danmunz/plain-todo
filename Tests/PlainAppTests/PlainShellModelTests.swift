@@ -875,7 +875,17 @@ final class PlainShellModelTests: XCTestCase {
         let calendar = Calendar(identifier: .gregorian)
         let now = Date()
         let today = calendar.startOfDay(for: now)
-        let thisWeek = calendar.date(byAdding: .day, value: -2, to: today) ?? today
+        // Use a date that's guaranteed to be in the same week as today
+        // by finding the start of this week and adding 1 day (unless today IS the start)
+        let weekStart = calendar.dateInterval(of: .weekOfYear, for: today)?.start ?? today
+        let thisWeekDate: Date
+        if calendar.isDate(weekStart, inSameDayAs: today) {
+            // Today is the first day of the week; there's no other "this week" day before today
+            // so we skip the "This Week" group in assertions
+            thisWeekDate = today // will merge with Today group
+        } else {
+            thisWeekDate = calendar.date(byAdding: .day, value: 1, to: weekStart) ?? today
+        }
         let earlier = calendar.date(byAdding: .day, value: -10, to: today) ?? today
 
         let formatter = DateFormatter()
@@ -884,13 +894,19 @@ final class PlainShellModelTests: XCTestCase {
         formatter.dateFormat = "yyyy-MM-dd"
 
         let todoURL = temporaryDirectory.appendingPathComponent("todo.txt")
-        try "\(formatter.string(from: today)) today task\n\(formatter.string(from: thisWeek)) this week task\n\(formatter.string(from: earlier)) earlier task\nundated task\n".write(to: todoURL, atomically: true, encoding: .utf8)
+        try "\(formatter.string(from: today)) today task\n\(formatter.string(from: thisWeekDate)) this week task\n\(formatter.string(from: earlier)) earlier task\nundated task\n".write(to: todoURL, atomically: true, encoding: .utf8)
 
         let model = PlainShellModel(sortPreferences: sortPreferences)
         model.open(url: todoURL)
         model.setSortMode(.creationDate)
 
-        XCTAssertEqual(model.visibleGroups.map(\.title), ["Today", "This Week", "Earlier", "No Date"])
+        let groupTitles = model.visibleGroups.map(\.title)
+        if calendar.isDate(thisWeekDate, inSameDayAs: today) {
+            // Today is the first day of the week — "This Week" merges into "Today"
+            XCTAssertEqual(groupTitles, ["Today", "Earlier", "No Date"])
+        } else {
+            XCTAssertEqual(groupTitles, ["Today", "This Week", "Earlier", "No Date"])
+        }
     }
 
     func testManualArchiveModeLeavesCompletedTaskInTodoFile() throws {
