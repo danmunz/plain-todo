@@ -2826,6 +2826,8 @@ final class PlainShellModel: ObservableObject {
                 apply(transaction: transaction)
                 registerUndo(actionName: "Complete and Archive", transaction: transaction, undoManager: undoManager)
                 transientError = nil
+            } catch is TaskMutationError {
+                // Stale identity during rapid actions — silently ignore
             } catch {
                 transientError = error.localizedDescription
             }
@@ -2838,6 +2840,8 @@ final class PlainShellModel: ObservableObject {
             selectedRowID = transaction.updatedSnapshot.lineIndex(for: lineIdentity).flatMap { transaction.updatedSnapshot.lines[$0].identity } ?? selectedRowID
             registerUndo(actionName: "Toggle Complete", transaction: transaction, undoManager: undoManager)
             transientError = nil
+        } catch is TaskMutationError {
+            // Stale identity during rapid actions — silently ignore
         } catch {
             transientError = error.localizedDescription
         }
@@ -2854,6 +2858,8 @@ final class PlainShellModel: ObservableObject {
             selectedRowID = transaction.updatedSnapshot.lines.first(where: { $0.rawText == transaction.updatedSnapshot.lines[transaction.originalSnapshot.lineIndex(for: lineIdentity) ?? 0].rawText })?.identity ?? selectedRowID
             registerUndo(actionName: "Set Priority", transaction: transaction, undoManager: undoManager)
             transientError = nil
+        } catch is TaskMutationError {
+            // Stale identity during rapid actions — silently ignore
         } catch {
             transientError = error.localizedDescription
         }
@@ -2870,6 +2876,8 @@ final class PlainShellModel: ObservableObject {
             selectedRowID = visibleRows.first?.id
             registerUndo(actionName: "Delete Task", transaction: transaction, undoManager: undoManager)
             transientError = nil
+        } catch is TaskMutationError {
+            // Stale identity during rapid deletes — silently ignore
         } catch {
             transientError = error.localizedDescription
         }
