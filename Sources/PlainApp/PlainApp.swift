@@ -1812,33 +1812,63 @@ private func priorityBgColor(_ priority: String) -> Color {
 
 // MARK: - Disable Native List Selection Highlight
 
-/// Walks up the NSView hierarchy to find the enclosing NSTableView
-/// and disables the system selection highlight so we can paint our own.
+/// Injects an NSView that finds and disables the native NSTableView
+/// selection highlight once the view hierarchy is fully installed.
 private struct DisableListSelectionHighlight: NSViewRepresentable {
-    func makeNSView(context: Context) -> NSView {
-        let view = NSView()
-        DispatchQueue.main.async {
-            disableSelectionHighlight(in: view)
+    final class Coordinator: NSObject {
+        var tableView: NSTableView?
+    }
+
+    func makeCoordinator() -> Coordinator { Coordinator() }
+
+    func makeNSView(context: Context) -> _TableViewFinder {
+        let finder = _TableViewFinder()
+        finder.onTableViewFound = { tableView in
+            tableView.selectionHighlightStyle = .none
+            context.coordinator.tableView = tableView
         }
-        return view
+        return finder
     }
 
-    func updateNSView(_ nsView: NSView, context: Context) {}
-
-    private func disableSelectionHighlight(in view: NSView) {
-        guard let tableView = findTableView(from: view) else { return }
-        tableView.selectionHighlightStyle = .none
+    func updateNSView(_ nsView: _TableViewFinder, context: Context) {
+        // Re-apply in case SwiftUI recreated the table
+        if let tv = context.coordinator.tableView {
+            tv.selectionHighlightStyle = .none
+        }
     }
 
-    private func findTableView(from view: NSView) -> NSTableView? {
-        var current: NSView? = view
-        while let v = current {
-            if let table = v as? NSTableView {
+    final class _TableViewFinder: NSView {
+        var onTableViewFound: ((NSTableView) -> Void)?
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            guard let window else { return }
+            // Search from window content view downward
+            if let tableView = Self.findTableView(in: window.contentView) {
+                onTableViewFound?(tableView)
+            } else {
+                // Table might not be installed yet; retry after layout pass
+                DispatchQueue.main.async { [weak self] in
+                    guard let self, let window = self.window else { return }
+                    if let tableView = Self.findTableView(in: window.contentView) {
+                        self.onTableViewFound?(tableView)
+                    }
+                }
+            }
+        }
+
+        private static func findTableView(in view: NSView?) -> NSTableView? {
+            guard let view else { return nil }
+            if let table = view as? NSTableView {
                 return table
             }
-            current = v.superview
+            for subview in view.subviews {
+                if let found = findTableView(in: subview) {
+                    return found
+                }
+            }
+            return nil
         }
-        return nil
     }
 }
 
