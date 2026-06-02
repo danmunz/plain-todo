@@ -34,6 +34,8 @@ struct PlainApp: App {
         _model = StateObject(wrappedValue: model)
         _quickAddController = StateObject(wrappedValue: quickAddController)
         self.isRunningTests = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+
+        TableRowSelectionOverride.install()
     }
 
     var body: some Scene {
@@ -629,7 +631,6 @@ struct PlainShellView: View {
             .listStyle(.inset)
             .scrollContentBackground(.hidden)
             .background(PlainTokens.Surface.canvas)
-            .background(DisableListSelectionHighlight())
             .onMoveCommand { direction in
                 switch direction {
                 case .down:
@@ -892,11 +893,6 @@ struct PlainShellView: View {
                 .frame(height: Measurement.rowSeparatorThickness)
                 .padding(.leading, Spacing.xl + Measurement.completionCircleDiameter + Spacing.sm)
         }
-        .listRowBackground(
-            model.selectedRowIDs.contains(row.id)
-                ? PlainTokens.Selection.bg
-                : Color.clear
-        )
         .listRowSeparator(.hidden)
         .tag(row.id)
     }
@@ -1810,65 +1806,58 @@ private func priorityBgColor(_ priority: String) -> Color {
     }
 }
 
-// MARK: - Disable Native List Selection Highlight
+// MARK: - Override Native List Selection Color
 
-/// Injects an NSView that finds and disables the native NSTableView
-/// selection highlight once the view hierarchy is fully installed.
-private struct DisableListSelectionHighlight: NSViewRepresentable {
-    final class Coordinator: NSObject {
-        var tableView: NSTableView?
+/// Swizzles NSTableRowView.drawSelection(in:) at app startup to replace
+/// the system accent highlight with our warm sienna. This is the only
+/// reliable way to override the native selection color in SwiftUI List
+/// on macOS, since the highlight is drawn by AppKit below SwiftUI's
+/// rendering layer.
+enum TableRowSelectionOverride {
+    nonisolated(unsafe) private static var installed = false
+
+    static func install() {
+        guard !installed else { return }
+        installed = true
+
+        let original = class_getInstanceMethod(
+            NSTableRowView.self,
+            #selector(NSTableRowView.drawSelection(in:))
+        )
+        let replacement = class_getInstanceMethod(
+            NSTableRowView.self,
+            #selector(NSTableRowView.plain_drawSelection(in:))
+        )
+        if let original, let replacement {
+            method_exchangeImplementations(original, replacement)
+        }
     }
+}
 
-    func makeCoordinator() -> Coordinator { Coordinator() }
+extension NSTableRowView {
+    @objc func plain_drawSelection(in dirtyRect: NSRect) {
+        guard isSelected else { return }
 
-    func makeNSView(context: Context) -> _TableViewFinder {
-        let finder = _TableViewFinder()
-        finder.onTableViewFound = { tableView in
-            tableView.selectionHighlightStyle = .none
-            context.coordinator.tableView = tableView
+        let color: NSColor
+        if isEmphasized {
+            // Focused / key window selection
+            color = NSColor(
+                calibratedRed: 0x9B / 255.0,
+                green: 0x6A / 255.0,
+                blue: 0x4A / 255.0,
+                alpha: 0.18
+            )
+        } else {
+            // Unfocused / background window selection
+            color = NSColor(
+                calibratedRed: 0x9B / 255.0,
+                green: 0x6A / 255.0,
+                blue: 0x4A / 255.0,
+                alpha: 0.10
+            )
         }
-        return finder
-    }
-
-    func updateNSView(_ nsView: _TableViewFinder, context: Context) {
-        // Re-apply in case SwiftUI recreated the table
-        if let tv = context.coordinator.tableView {
-            tv.selectionHighlightStyle = .none
-        }
-    }
-
-    final class _TableViewFinder: NSView {
-        var onTableViewFound: ((NSTableView) -> Void)?
-
-        override func viewDidMoveToWindow() {
-            super.viewDidMoveToWindow()
-            guard let window else { return }
-            // Search from window content view downward
-            if let tableView = Self.findTableView(in: window.contentView) {
-                onTableViewFound?(tableView)
-            } else {
-                // Table might not be installed yet; retry after layout pass
-                DispatchQueue.main.async { [weak self] in
-                    guard let self, let window = self.window else { return }
-                    if let tableView = Self.findTableView(in: window.contentView) {
-                        self.onTableViewFound?(tableView)
-                    }
-                }
-            }
-        }
-
-        private static func findTableView(in view: NSView?) -> NSTableView? {
-            guard let view else { return nil }
-            if let table = view as? NSTableView {
-                return table
-            }
-            for subview in view.subviews {
-                if let found = findTableView(in: subview) {
-                    return found
-                }
-            }
-            return nil
-        }
+        color.setFill()
+        dirtyRect.fill()
     }
 }
 
