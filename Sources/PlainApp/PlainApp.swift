@@ -3392,27 +3392,33 @@ final class PlainShellModel: ObservableObject {
     }
 
     private func registerUndo(actionName: String, transaction: WriteTransaction, undoManager: UndoManager?) {
+        nonisolated(unsafe) let undoManager = undoManager
         undoManager?.registerUndo(withTarget: self) { target in
-            target.restoreSnapshot(
-                transaction.originalSnapshot,
-                inverseSnapshot: transaction.updatedSnapshot,
-                actionName: actionName,
-                undoManager: undoManager
-            )
+            MainActor.assumeIsolated {
+                target.restoreSnapshot(
+                    transaction.originalSnapshot,
+                    inverseSnapshot: transaction.updatedSnapshot,
+                    actionName: actionName,
+                    undoManager: undoManager
+                )
+            }
         }
         undoManager?.setActionName(actionName)
     }
 
     private func registerUndo(actionName: String, transaction: ArchiveTransaction, undoManager: UndoManager?) {
+        nonisolated(unsafe) let undoManager = undoManager
         undoManager?.registerUndo(withTarget: self) { target in
-            target.restoreArchiveSnapshots(
-                todoSnapshot: transaction.originalTodoSnapshot,
-                doneSnapshot: transaction.originalDoneSnapshot,
-                inverseTodoSnapshot: transaction.updatedTodoSnapshot,
-                inverseDoneSnapshot: transaction.updatedDoneSnapshot,
-                actionName: actionName,
-                undoManager: undoManager
-            )
+            MainActor.assumeIsolated {
+                target.restoreArchiveSnapshots(
+                    todoSnapshot: transaction.originalTodoSnapshot,
+                    doneSnapshot: transaction.originalDoneSnapshot,
+                    inverseTodoSnapshot: transaction.updatedTodoSnapshot,
+                    inverseDoneSnapshot: transaction.updatedDoneSnapshot,
+                    actionName: actionName,
+                    undoManager: undoManager
+                )
+            }
         }
         undoManager?.setActionName(actionName)
     }
@@ -3430,13 +3436,16 @@ final class PlainShellModel: ObservableObject {
         do {
             let transaction = try store.write(snapshot: snapshot)
             apply(transaction: transaction)
+            nonisolated(unsafe) let undoManager = undoManager
             undoManager?.registerUndo(withTarget: self) { target in
-                target.restoreSnapshot(
-                    inverseSnapshot,
-                    inverseSnapshot: snapshot,
-                    actionName: actionName,
-                    undoManager: undoManager
-                )
+                MainActor.assumeIsolated {
+                    target.restoreSnapshot(
+                        inverseSnapshot,
+                        inverseSnapshot: snapshot,
+                        actionName: actionName,
+                        undoManager: undoManager
+                    )
+                }
             }
             undoManager?.setActionName(actionName)
             transientError = nil
@@ -3460,15 +3469,18 @@ final class PlainShellModel: ObservableObject {
         do {
             let transaction = try store.write(todoSnapshot: todoSnapshot, doneSnapshot: doneSnapshot)
             apply(transaction: transaction)
+            nonisolated(unsafe) let undoManager = undoManager
             undoManager?.registerUndo(withTarget: self) { target in
-                target.restoreArchiveSnapshots(
-                    todoSnapshot: inverseTodoSnapshot,
-                    doneSnapshot: inverseDoneSnapshot,
-                    inverseTodoSnapshot: todoSnapshot,
-                    inverseDoneSnapshot: doneSnapshot,
-                    actionName: actionName,
-                    undoManager: undoManager
-                )
+                MainActor.assumeIsolated {
+                    target.restoreArchiveSnapshots(
+                        todoSnapshot: inverseTodoSnapshot,
+                        doneSnapshot: inverseDoneSnapshot,
+                        inverseTodoSnapshot: todoSnapshot,
+                        inverseDoneSnapshot: doneSnapshot,
+                        actionName: actionName,
+                        undoManager: undoManager
+                    )
+                }
             }
             undoManager?.setActionName(actionName)
             transientError = nil
@@ -3741,10 +3753,10 @@ final class PlainShellModel: ObservableObject {
     private func buildVisibleRows(from snapshot: TodoFileSnapshot, tasks: [IndexedTask]) -> [Row] {
         if sortMode != .fileOrder {
             return tasks
-                .filter(matchesSelection)
-                .filter(isVisibleInActiveViews)
-                .sorted(by: sortComparator)
-                .map(makeRow)
+                .filter { self.matchesSelection($0) }
+                .filter { self.isVisibleInActiveViews($0) }
+                .sorted { self.sortComparator($0, $1) }
+                .map { self.makeRow(from: $0) }
         }
 
         return snapshot.lines.enumerated().compactMap { index, line -> Row? in
