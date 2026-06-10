@@ -71,6 +71,29 @@ For faster core-only validation:
 swift test
 ```
 
+## Download & Install
+
+Grab the latest `.zip` from [Releases](../../releases). Unzip and move `Plain.app` to your Applications folder.
+
+Since the app is unsigned (no Apple Developer Program membership), macOS Gatekeeper will block the first launch. To open it:
+
+1. Right-click (or Control-click) `Plain.app` → **Open** → click **Open** in the dialog, or
+2. Run in Terminal: `xattr -cr /Applications/Plain.app`
+
+After the first launch, macOS remembers your choice and opens it normally.
+
+## Releasing
+
+Push a version tag to trigger a GitHub Actions build that archives and publishes:
+
+```bash
+# bump version in Sources/PlainApp/Info.plist, then:
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+The workflow archives the app unsigned and attaches `Plain-vX.Y.Z-macOS.zip` to the GitHub Release.
+
 ## Status
 
 The current bootstrap has working foundations but is not yet v1 complete:
