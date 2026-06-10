@@ -42,27 +42,45 @@ enum PlainTokens {
     // MARK: Semantic Text
 
     enum TextToken {
-        static let primary = Gray.g900
-        static let secondary = Gray.g600
-        static let muted = Gray.g400
+        static let primary = Color(
+            light: .hex(0x2C2A28), dark: .hex(0xF5F3EF),
+            lightHC: .hex(0x1A1918), darkHC: .hex(0xFAF9F7))
+        static let secondary = Color(
+            light: .hex(0x6B6760), dark: .hex(0xA8A49B),
+            lightHC: .hex(0x3D3B38), darkHC: .hex(0xE3E0D9))
+        static let muted = Color(
+            light: .hex(0xA8A49B), dark: .hex(0x6B6760),
+            lightHC: .hex(0x504D47), darkHC: .hex(0xD1CDC4))
         static let inverse = Gray.g50
     }
 
     // MARK: Borders & Separators
 
     enum Border {
-        static let row = Color(light: .hex(0xDDD8CE), dark: .hex(0x383530))
-        static let section = Color(light: .hex(0xCCC7BC), dark: .hex(0x4A4740))
-        static let input = Color(light: .hex(0xD5D0C6), dark: .hex(0x383530))
-        static let inputFocused = Color(light: .hex(0x9B6A4A, opacity: 0.60), dark: .hex(0xC8956E, opacity: 0.60))
+        static let row = Color(
+            light: .hex(0xDDD8CE), dark: .hex(0x383530),
+            lightHC: .hex(0x8A8680), darkHC: .hex(0x7A7670))
+        static let section = Color(
+            light: .hex(0xCCC7BC), dark: .hex(0x4A4740),
+            lightHC: .hex(0x6B6760), darkHC: .hex(0x8A8680))
+        static let input = Color(
+            light: .hex(0xD5D0C6), dark: .hex(0x383530),
+            lightHC: .hex(0x6B6760), darkHC: .hex(0x8A8680))
+        static let inputFocused = Color(
+            light: .hex(0x9B6A4A, opacity: 0.60), dark: .hex(0xC8956E, opacity: 0.60),
+            lightHC: .hex(0x7A4A2A), darkHC: .hex(0xE8AB7A))
     }
 
     // MARK: Selection & Focus
 
     enum Selection {
         static let bar = PlainTokens.accent
-        static let bg = Color(light: .hex(0x9B6A4A, opacity: 0.10), dark: .hex(0xC8956E, opacity: 0.15))
-        static let sidebarBg = Color(light: .hex(0x9B6A4A, opacity: 0.12), dark: .hex(0xC8956E, opacity: 0.18))
+        static let bg = Color(
+            light: .hex(0x9B6A4A, opacity: 0.10), dark: .hex(0xC8956E, opacity: 0.15),
+            lightHC: .hex(0x9B6A4A, opacity: 0.22), darkHC: .hex(0xC8956E, opacity: 0.30))
+        static let sidebarBg = Color(
+            light: .hex(0x9B6A4A, opacity: 0.12), dark: .hex(0xC8956E, opacity: 0.18),
+            lightHC: .hex(0x9B6A4A, opacity: 0.25), darkHC: .hex(0xC8956E, opacity: 0.35))
     }
 
     // MARK: Syntax Highlighting
@@ -339,6 +357,24 @@ extension Color {
             let isDark = appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
             let spec = isDark ? dark : light
             return spec.nsColor
+        })
+    }
+
+    /// Create an adaptive color with an optional high-contrast override per mode.
+    init(light: ColorSpec, dark: ColorSpec, lightHC: ColorSpec, darkHC: ColorSpec) {
+        self.init(nsColor: NSColor(name: nil) { appearance in
+            let isDark = appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+            let isHC = appearance.bestMatch(from: [
+                .accessibilityHighContrastAqua,
+                .accessibilityHighContrastDarkAqua,
+                .aqua,
+                .darkAqua
+            ])?.rawValue.contains("HighContrast") ?? false
+            if isDark {
+                return isHC ? darkHC.nsColor : dark.nsColor
+            } else {
+                return isHC ? lightHC.nsColor : light.nsColor
+            }
         })
     }
 }

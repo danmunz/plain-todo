@@ -96,12 +96,18 @@ The workflow archives the app unsigned and attaches `Plain-vX.Y.Z-macOS.zip` to 
 
 ## Status
 
-The current bootstrap has working foundations but is not yet v1 complete:
+v1 feature-complete:
 
-- PlainCore-first architecture
-- one coordinated read and write pipeline
-- last writable file and sidebar filter session restore, plus per-view persisted sort modes
-- inline raw-line editing, scratch-pad raw file editing with parse-on-save rebuild, a global quick-add panel that reuses the main add pipeline, an optional menu bar extra with live inbox or schedule counts and quick actions, keyboard row selection, grouped sorted task views, Cmd+F live search, natural-language due-date preview for new tasks, automatic creation-date insertion for new tasks, persisted show-completed visibility, UndoManager-backed destructive edits, keyboard and drag reorder, coordinated archive-to-`done.txt`, archive-behavior, creation-date, show-completed, and menu-bar preferences, and reload, keep-mine, or view-diff conflict handling for external file changes
-- Xcode-native app, unit-test, and UI-test path
-- no database or hidden persistence
-- richer diff tooling still pending
+- PlainCore-first architecture with one coordinated read/write pipeline
+- Session restore (last file, sidebar filter, window frame, sort modes)
+- Full editing: inline raw-line edit, scratch-pad, quick-add panel, add bar with natural-language due-date preview
+- Keyboard-first: navigation, J/K, selection, multi-select, reorder, complete, delete, reprioritize, undo/redo
+- Optional menu bar extra with live counts and quick actions
+- Grouped/sorted task views, Cmd+F live search, sidebar smart filters
+- Coordinated archive-to-`done.txt` with read-only Done view
+- External-change conflict handling with side-by-side diff, reload, and keep-mine resolution
+- WidgetKit extension with deep links back into filtered views
+- Full preferences (General/Appearance/Shortcuts/Advanced)
+- Accessibility: VoiceOver labels, reduced-motion support, high-contrast token adaptation
+- UI regression tests for keyboard editing flows
+- No database or hidden persistence
