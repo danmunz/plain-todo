@@ -119,6 +119,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
           git fetch origin gh-pages
+          git stash push --include-untracked --message "release workflow generated files"
           git checkout gh-pages
 
           if [ -f appcast.xml ]; then
