@@ -313,6 +313,8 @@ struct MainWindowRegistrationView: View {
     var body: some View {
         WindowAccessor { window in
             window.setFrameAutosaveName("PlainMainWindow")
+            // The filename lives in the colophon; the title bar stays quiet.
+            window.titleVisibility = .hidden
         }
         .frame(width: 0, height: 0)
         .onAppear {

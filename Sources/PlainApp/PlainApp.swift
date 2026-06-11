@@ -82,90 +82,100 @@ struct PlainShellView: View {
         _model = ObservedObject(wrappedValue: model)
     }
 
-    var body: some View {
-        NavigationSplitView(columnVisibility: $columnVisibility) {
-            List(selection: $model.selection) {
+    private var sidebarList: some View {
+        List(selection: $model.selection) {
+            Section {
+                SidebarRow(title: "Inbox", count: model.inboxCount, icon: "tray")
+                    .tag(SidebarSelection.inbox)
+                SidebarRow(title: "Today", count: model.todayCount, icon: "sun.max")
+                    .tag(SidebarSelection.today)
+                SidebarRow(
+                    title: "Overdue",
+                    count: model.overdueCount,
+                    icon: "clock.badge.exclamationmark",
+                    iconTint: model.overdueCount > 0 ? PlainTokens.Status.overdue : PlainTokens.TextToken.secondary,
+                    isOverdue: model.overdueCount > 0
+                )
+                .tag(SidebarSelection.overdue)
+            } header: {
+                SidebarSectionHeader("SMART FILTERS")
+            }
+
+            if !model.projectCounts.isEmpty {
                 Section {
-                    SidebarRow(title: "Inbox", count: model.inboxCount, icon: "tray")
-                        .tag(SidebarSelection.inbox)
-                    SidebarRow(title: "Today", count: model.todayCount, icon: "sun.max")
-                        .tag(SidebarSelection.today)
-                    SidebarRow(
-                        title: "Overdue",
-                        count: model.overdueCount,
-                        icon: "clock.badge.exclamationmark",
-                        iconTint: model.overdueCount > 0 ? PlainTokens.Status.overdue : PlainTokens.TextToken.secondary,
-                        isOverdue: model.overdueCount > 0
-                    )
-                    .tag(SidebarSelection.overdue)
-                } header: {
-                    SidebarSectionHeader("SMART FILTERS")
-                }
-
-                if !model.projectCounts.isEmpty {
-                    Section {
-                        ForEach(model.projectCounts, id: \.name) { project in
-                            SidebarRow(
-                                title: project.name,
-                                count: project.count,
-                                sigil: "+",
-                                sigilTint: PlainTokens.Syntax.project
-                            )
-                            .tag(SidebarSelection.project(project.name))
-                        }
-                    } header: {
-                        SidebarSectionHeader("PROJECTS")
+                    ForEach(model.projectCounts, id: \.name) { project in
+                        SidebarRow(
+                            title: project.name,
+                            count: project.count,
+                            sigil: "+",
+                            sigilTint: PlainTokens.Syntax.project
+                        )
+                        .tag(SidebarSelection.project(project.name))
                     }
-                }
-
-                if !model.contextCounts.isEmpty {
-                    Section {
-                        ForEach(model.contextCounts, id: \.name) { context in
-                            SidebarRow(
-                                title: context.name,
-                                count: context.count,
-                                sigil: "@",
-                                sigilTint: PlainTokens.Syntax.context
-                            )
-                            .tag(SidebarSelection.context(context.name))
-                        }
-                    } header: {
-                        SidebarSectionHeader("CONTEXTS")
-                    }
-                }
-
-                Section {
-                    SidebarRow(title: "Done", count: model.doneCount, icon: "archivebox")
-                        .tag(SidebarSelection.done)
                 } header: {
-                    SidebarSectionHeader("ARCHIVE")
+                    SidebarSectionHeader("PROJECTS")
                 }
             }
-            .scrollContentBackground(.hidden)
-            .background(PlainTokens.Surface.sidebar)
-            .listStyle(.sidebar)
-            .accessibilityIdentifier("plain.sidebar")
-            .navigationSplitViewColumnWidth(min: 220, ideal: 240)
-        } detail: {
-            Group {
-                if model.snapshot == nil, model.loadError == nil {
-                    onboardingView
-                } else if let loadError = model.loadError {
-                    PlaceholderCard(
-                        title: model.isWaitingForICloud ? "Downloading from iCloud…" : "Unable to load todo.txt",
-                        systemImage: model.isWaitingForICloud ? "icloud.and.arrow.down" : "exclamationmark.triangle",
-                        message: loadError,
-                        primaryActionTitle: model.isWaitingForICloud ? nil : "Open an existing file",
-                        primaryAction: model.isWaitingForICloud ? nil : { isFileImporterPresented = true },
-                        secondaryActionTitle: model.isWaitingForICloud ? nil : "Use bundled sample",
-                        secondaryAction: model.isWaitingForICloud ? nil : { model.loadBundledSample() }
-                    )
-                } else {
-                    detailView
+
+            if !model.contextCounts.isEmpty {
+                Section {
+                    ForEach(model.contextCounts, id: \.name) { context in
+                        SidebarRow(
+                            title: context.name,
+                            count: context.count,
+                            sigil: "@",
+                            sigilTint: PlainTokens.Syntax.context
+                        )
+                        .tag(SidebarSelection.context(context.name))
+                    }
+                } header: {
+                    SidebarSectionHeader("CONTEXTS")
                 }
+            }
+
+            Section {
+                SidebarRow(title: "Done", count: model.doneCount, icon: "archivebox")
+                    .tag(SidebarSelection.done)
+            } header: {
+                SidebarSectionHeader("ARCHIVE")
             }
         }
+        .scrollContentBackground(.hidden)
+        .background(PlainTokens.Surface.sidebar)
+        .listStyle(.sidebar)
+        .accessibilityIdentifier("plain.sidebar")
+        .navigationSplitViewColumnWidth(min: 220, ideal: 240)
+    }
+
+    @ViewBuilder
+    private var detailContainer: some View {
+        if model.snapshot == nil, model.loadError == nil {
+            onboardingView
+        } else if let loadError = model.loadError {
+            PlaceholderCard(
+                title: model.isWaitingForICloud ? "Downloading from iCloud…" : "Unable to load todo.txt",
+                systemImage: model.isWaitingForICloud ? "icloud.and.arrow.down" : "exclamationmark.triangle",
+                message: loadError,
+                primaryActionTitle: model.isWaitingForICloud ? nil : "Open an existing file",
+                primaryAction: model.isWaitingForICloud ? nil : { isFileImporterPresented = true },
+                secondaryActionTitle: model.isWaitingForICloud ? nil : "Use bundled sample",
+                secondaryAction: model.isWaitingForICloud ? nil : { model.loadBundledSample() }
+            )
+        } else {
+            detailView
+        }
+    }
+
+    /// First half of the shell's modifier stack, split out so the
+    /// type-checker handles each expression separately.
+    private var shellCore: some View {
+        NavigationSplitView(columnVisibility: $columnVisibility) {
+            sidebarList
+        } detail: {
+            detailContainer
+        }
         .navigationTitle(model.windowTitle)
+        .modifier(HiddenToolbarTitle())
         .tint(PlainTokens.accent)
         .frame(minWidth: 760, minHeight: 440)
         .onChange(of: newTaskText) { _, updatedValue in
@@ -186,36 +196,42 @@ struct PlainShellView: View {
         .onChange(of: model.draftResetToken) { _, _ in
             resetDraftUI()
         }
-        .toolbar {
-            ToolbarItemGroup(placement: .primaryAction) {
-                Picker("Sort", selection: Binding(get: { model.sortMode }, set: { model.setSortMode($0) })) {
-                    ForEach(TaskSortMode.allCases) { sortMode in
-                        Text(sortMode.title).tag(sortMode)
-                    }
-                }
-                .pickerStyle(.menu)
-                .disabled(model.selection == .done)
-                .help("Sort Mode (⌘⇧S)")
+    }
 
-                Button {
-                    toggleScratchPad()
-                } label: {
-                    Image(systemName: model.isScratchPadPresented ? "doc.text.fill" : "doc.text")
-                }
-                .keyboardShortcut("e")
-                .disabled(!model.canToggleScratchPad)
-                .help(model.isScratchPadPresented ? "Save & Return (⌘E)" : "Scratch Pad (⌘E)")
-
-                Button {
-                    isArchiveConfirmationPresented = true
-                } label: {
-                    Image(systemName: "archivebox")
-                }
-                .keyboardShortcut("A", modifiers: [.command, .shift])
-                .disabled(!model.isEditable || model.archivableCompletedTaskCount == 0)
-                .help("Archive Completed (⌘⇧A)")
-            }
+    /// Scratch pad toggle, styled as quiet masthead furniture.
+    private var scratchPadButton: some View {
+        Button {
+            toggleScratchPad()
+        } label: {
+            Image(systemName: model.isScratchPadPresented ? "doc.text.fill" : "doc.text")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(PlainTokens.TextToken.secondary)
         }
+        .buttonStyle(.plain)
+        .keyboardShortcut("e")
+        .disabled(!model.canToggleScratchPad)
+        .help(model.isScratchPadPresented ? "Save & Return (⌘E)" : "Scratch Pad (⌘E)")
+        .accessibilityLabel("Scratch Pad")
+    }
+
+    private var archiveButton: some View {
+        Button {
+            isArchiveConfirmationPresented = true
+        } label: {
+            Image(systemName: "archivebox")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(PlainTokens.TextToken.secondary)
+        }
+        .buttonStyle(.plain)
+        .keyboardShortcut("A", modifiers: [.command, .shift])
+        .disabled(!model.isEditable || model.archivableCompletedTaskCount == 0)
+        .help("Archive Completed (⌘⇧A)")
+        .accessibilityLabel("Archive Completed")
+    }
+
+    var body: some View {
+        shellCore
+        .toolbarBackground(.hidden, for: .windowToolbar)
         .alert(
             "Archive \(model.archivableCompletedTaskCount) completed tasks to done.txt?",
             isPresented: $isArchiveConfirmationPresented
@@ -435,6 +451,16 @@ struct PlainShellView: View {
 
     /// Editorial view header: Didot title, small-caps date, double hairline rule.
     private func masthead(title: Text, subtitle: String) -> some View {
+        masthead(title: title, subtitle: subtitle) { EmptyView() }
+    }
+
+    /// Masthead with a quiet row of view controls under the date — the
+    /// window chrome lives here now, not in the system toolbar.
+    private func masthead(
+        title: Text,
+        subtitle: String,
+        @ViewBuilder controls: () -> some View
+    ) -> some View {
         VStack(alignment: .leading, spacing: Spacing.lg) {
             HStack(alignment: .lastTextBaseline) {
                 title
@@ -444,13 +470,18 @@ struct PlainShellView: View {
                 Spacer()
 
                 VStack(alignment: .trailing, spacing: Spacing.sm) {
-                    Text(mastheadDateText)
-                        .font(PlainType.mastheadDate)
-                        .tracking(Tracking.mastheadDate)
-                        .foregroundStyle(PlainTokens.TextToken.muted)
-                    Text(subtitle)
-                        .font(PlainType.mastheadMeta)
-                        .foregroundStyle(PlainTokens.TextToken.secondary)
+                    Group {
+                        Text(mastheadDateText)
+                            .font(PlainType.mastheadDate)
+                            .tracking(Tracking.mastheadDate)
+                            .foregroundStyle(PlainTokens.TextToken.muted)
+                        Text(subtitle)
+                            .font(PlainType.mastheadMeta)
+                            .foregroundStyle(PlainTokens.TextToken.secondary)
+                    }
+                    .accessibilityElement(children: .combine)
+
+                    controls()
                 }
             }
 
@@ -466,12 +497,18 @@ struct PlainShellView: View {
         }
         .padding(.horizontal, Spacing.xl)
         .padding(.top, Spacing.xxl)
-        .accessibilityElement(children: .combine)
     }
 
     private var activeTasksDetailView: some View {
         VStack(alignment: .leading, spacing: 0) {
-            masthead(title: mastheadTitleText, subtitle: mastheadCountText)
+            masthead(title: mastheadTitleText, subtitle: mastheadCountText) {
+                HStack(spacing: Spacing.lg) {
+                    sortMenu
+                    scratchPadButton
+                    archiveButton
+                }
+                .padding(.top, Spacing.xs)
+            }
 
             if let transientError = model.transientError {
                 Text(transientError)
@@ -866,6 +903,33 @@ struct PlainShellView: View {
 
     @Environment(\.plainFontSize) private var fontSize
 
+    /// Sort control styled as quiet editorial chrome: the current mode in
+    /// tracked small caps rather than a system popup button.
+    private var sortMenu: some View {
+        Menu {
+            Picker("Sort", selection: Binding(get: { model.sortMode }, set: { model.setSortMode($0) })) {
+                ForEach(TaskSortMode.allCases) { sortMode in
+                    Text(sortMode.title).tag(sortMode)
+                }
+            }
+            .pickerStyle(.inline)
+        } label: {
+            HStack(spacing: Spacing.sm) {
+                Text(model.sortMode.title.uppercased())
+                    .font(PlainType.mastheadDate)
+                    .tracking(Tracking.mastheadDate)
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.system(size: 8, weight: .semibold))
+            }
+            .foregroundStyle(PlainTokens.TextToken.secondary)
+        }
+        .menuStyle(.button)
+        .buttonStyle(.plain)
+        .fixedSize()
+        .disabled(model.selection == .done)
+        .help("Sort Mode (⌘⇧S)")
+    }
+
     /// When any visible row carries a priority, every row reserves the
     /// marginal column so task text stays aligned down the page.
     private var visibleRowsHavePriority: Bool {
@@ -1164,7 +1228,10 @@ struct PlainShellView: View {
 
     private var scratchPadDetailView: some View {
         VStack(alignment: .leading, spacing: 0) {
-            masthead(title: Text("Scratch Pad"), subtitle: "the raw file, in your hands")
+            masthead(title: Text("Scratch Pad"), subtitle: "the raw file, in your hands") {
+                scratchPadButton
+                    .padding(.top, Spacing.xs)
+            }
 
             HStack {
                 Text("Edit the full todo.txt directly. Save reparses and writes through the coordinated store.")
@@ -2184,6 +2251,19 @@ private struct SyntaxHighlightedText: View {
     }
 }
 
+/// Hides the toolbar's title text where the API exists (macOS 15+);
+/// the filename is carried by the colophon instead. macOS 14 keeps
+/// the standard quiet title.
+private struct HiddenToolbarTitle: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(macOS 15.0, *) {
+            content.toolbar(removing: .title)
+        } else {
+            content
+        }
+    }
+}
+
 private struct GroupHeader: View {
     let title: String
     var count: Int = 0
@@ -2539,7 +2619,10 @@ final class PlainShellModel: ObservableObject {
 
     var statusText: String {
         let tasks = inboxCount == 1 ? "1 task" : "\(inboxCount) tasks"
-        return "\(tasks) · \(doneThisWeekCount) done this week · \(overdueCount) overdue"
+        let counts = "\(tasks) · \(doneThisWeekCount) done this week · \(overdueCount) overdue"
+        // The filename lives here now that the window title bar is hidden.
+        guard let url = currentSourceURL else { return counts }
+        return "\(url.lastPathComponent) · \(counts)"
     }
 
     var windowTitle: String {
