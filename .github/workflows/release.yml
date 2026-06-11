@@ -127,7 +127,23 @@ jobs:
           git checkout gh-pages
 
           if [ -f appcast.xml ]; then
-            # Insert new item before closing </channel>
+            # Remove any existing entry for this version, then insert the new item before closing </channel>.
+            awk -v version="${VERSION}" '
+              /<item>/ { in_item = 1; item = $0 ORS; item_matches = 0; next }
+              in_item {
+                item = item $0 ORS
+                if ($0 ~ "<sparkle:version>" version "</sparkle:version>") item_matches = 1
+                if ($0 ~ /<\/item>/) {
+                  if (!item_matches) printf "%s", item
+                  in_item = 0
+                  item = ""
+                }
+                next
+              }
+              { print }
+            ' appcast.xml > appcast_filtered.xml
+            mv appcast_filtered.xml appcast.xml
+
             printf '%s\n' "$NEW_ITEM" > appcast_item.xml
             awk 'FNR == NR { item = item $0 ORS; next } /<\/channel>/ { printf "%s", item } { print }' appcast_item.xml appcast.xml > appcast_tmp.xml
             mv appcast_tmp.xml appcast.xml
