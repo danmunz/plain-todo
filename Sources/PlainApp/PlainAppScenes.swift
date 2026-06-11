@@ -10,6 +10,7 @@ struct PlainAppScenes: Scene {
     var body: some Scene {
         PlainMainWindowScene(preferences: preferences, model: model, quickAddController: quickAddController)
         PlainSettingsScene(preferences: preferences)
+        PlainMenuBarScene(preferences: preferences, model: model, quickAddController: quickAddController, isRunningTests: isRunningTests)
     }
 }
 
@@ -101,7 +102,7 @@ private struct PlainMenuBarScene: Scene {
                     return preferences.showMenuBarItem
                 },
                 set: { newValue in
-                    guard !isRunningTests else {
+                    guard !isRunningTests, preferences.showMenuBarItem != newValue else {
                         return
                     }
                     preferences.showMenuBarItem = newValue

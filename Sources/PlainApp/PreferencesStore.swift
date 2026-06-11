@@ -77,6 +77,16 @@ final class PreferencesStore: ObservableObject {
     @Published var showMenuBarItem: Bool {
         didSet {
             userDefaults.set(showMenuBarItem, forKey: showMenuBarItemKey)
+            if !showMenuBarItem && hideDockIcon {
+                hideDockIcon = false
+            }
+        }
+    }
+
+    @Published var hideDockIcon: Bool {
+        didSet {
+            userDefaults.set(hideDockIcon, forKey: hideDockIconKey)
+            NSApp.setActivationPolicy(hideDockIcon ? .accessory : .regular)
         }
     }
 
@@ -115,6 +125,7 @@ final class PreferencesStore: ObservableObject {
     private let automaticallyAddCreationDateKey = "PlainAutomaticallyAddCreationDate"
     private let showCompletedTasksKey = "PlainShowCompletedTasks"
     private let showMenuBarItemKey = "PlainShowMenuBarItem"
+    private let hideDockIconKey = "PlainHideDockIcon"
     private let themeKey = "PlainTheme"
     private let fontSizeKey = "PlainFontSize"
     private let defaultPriorityKey = "PlainDefaultPriority"
@@ -148,6 +159,8 @@ final class PreferencesStore: ObservableObject {
         } else {
             self.showMenuBarItem = userDefaults.bool(forKey: showMenuBarItemKey)
         }
+
+        self.hideDockIcon = userDefaults.bool(forKey: hideDockIconKey)
 
         if let rawValue = userDefaults.string(forKey: themeKey),
            let theme = AppTheme(rawValue: rawValue)
@@ -278,13 +291,17 @@ private struct ShortcutsPreferencesTab: View {
         ("Cycle sort mode", "⌘⇧S"),
         ("Archive completed", "⌘⇧A"),
         ("Scratch pad", "⌘E"),
-        ("Quick add (global)", "⌃⌥T"),
+        ("Quick add (global)", "⌘⇧Space"),
         ("Toggle sidebar", "⌘\\"),
     ]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Toggle("Show menu bar icon", isOn: $preferences.showMenuBarItem)
+
+            Toggle("Hide dock icon", isOn: $preferences.hideDockIcon)
+                .disabled(!preferences.showMenuBarItem)
+                .help("Run as a menu-bar-only app. Requires the menu bar icon.")
 
             Divider()
 

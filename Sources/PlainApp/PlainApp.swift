@@ -36,6 +36,10 @@ struct PlainApp: App {
         self.isRunningTests = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
 
         TableRowSelectionOverride.install()
+
+        if preferences.hideDockIcon && preferences.showMenuBarItem {
+            NSApp.setActivationPolicy(.accessory)
+        }
     }
 
     var body: some Scene {
@@ -65,11 +69,7 @@ struct PlainShellView: View {
     @State private var scratchPadText = ""
     @State private var highlightedRowID: LineIdentity?
     @State private var completingRowID: LineIdentity?
-    @State private var autocompleteSuggestions: [String] = []
-    @State private var autocompleteIndex: Int = 0
-    @State private var autocompletePrefix: Character?  // '@' or '+'
-    @State private var isDueDatePickerPresented = false
-    @State private var dueDatePickerValue = Date()
+    @StateObject private var autocomplete: AutocompleteEngine
     @State private var columnVisibility: NavigationSplitViewVisibility = {
         if UserDefaults.standard.bool(forKey: "PlainSidebarCollapsed") {
             return .detailOnly
@@ -80,6 +80,10 @@ struct PlainShellView: View {
 
     init(model: PlainShellModel) {
         _model = ObservedObject(wrappedValue: model)
+        _autocomplete = StateObject(wrappedValue: AutocompleteEngine(tagProvider: { [weak model] in
+            guard let model else { return ([], []) }
+            return (projects: model.projectCounts.map(\.name), contexts: model.contextCounts.map(\.name))
+        }))
     }
 
     private var sidebarList: some View {
@@ -539,37 +543,37 @@ struct PlainShellView: View {
                     .accessibilityLabel("Add a task")
                     .accessibilityHint("Type a task and press Return to add it")
                     .onSubmit {
-                        if !autocompleteSuggestions.isEmpty {
-                            acceptAutocompleteSuggestion(autocompleteSuggestions[autocompleteIndex])
+                        if autocomplete.hasSuggestions {
+                            autocomplete.acceptSuggestion(in: &newTaskText)
                         } else {
                             submitNewTask()
                         }
                     }
                     .onChange(of: newTaskText) { _, newValue in
-                        updateAutocompleteSuggestions(for: newValue)
+                        autocomplete.update(for: newValue)
                     }
                     .onKeyPress(.upArrow) {
-                        guard !autocompleteSuggestions.isEmpty else { return .ignored }
-                        autocompleteIndex = max(0, autocompleteIndex - 1)
+                        guard autocomplete.hasSuggestions else { return .ignored }
+                        autocomplete.moveUp()
                         return .handled
                     }
                     .onKeyPress(.downArrow) {
-                        guard !autocompleteSuggestions.isEmpty else { return .ignored }
-                        autocompleteIndex = min(autocompleteSuggestions.count - 1, autocompleteIndex + 1)
+                        guard autocomplete.hasSuggestions else { return .ignored }
+                        autocomplete.moveDown()
                         return .handled
                     }
                     .onKeyPress(.tab) {
-                        guard !autocompleteSuggestions.isEmpty else { return .ignored }
-                        acceptAutocompleteSuggestion(autocompleteSuggestions[autocompleteIndex])
+                        guard autocomplete.hasSuggestions else { return .ignored }
+                        autocomplete.acceptSuggestion(in: &newTaskText)
                         return .handled
                     }
                     .onKeyPress(.escape) {
-                        if isDueDatePickerPresented {
-                            isDueDatePickerPresented = false
+                        if autocomplete.isDueDatePickerPresented {
+                            autocomplete.isDueDatePickerPresented = false
                             return .handled
                         }
-                        guard !autocompleteSuggestions.isEmpty else { return .ignored }
-                        autocompleteSuggestions = []
+                        guard autocomplete.hasSuggestions else { return .ignored }
+                        autocomplete.dismiss()
                         return .handled
                     }
 
@@ -621,116 +625,18 @@ struct PlainShellView: View {
             )
             .animation(Anim.normalEaseInOut(reduceMotion: reduceMotion), value: focusedField == .newTask)
             .overlay(alignment: .topLeading) {
-                if !autocompleteSuggestions.isEmpty {
-                    let prefix = autocompletePrefix.map(String.init) ?? ""
-                    let syntaxColor = autocompletePrefix == "+" ? PlainTokens.Syntax.project : PlainTokens.Syntax.context
-                    VStack(alignment: .leading, spacing: 0) {
-                        ForEach(Array(autocompleteSuggestions.enumerated()), id: \.offset) { index, suggestion in
-                            Button {
-                                acceptAutocompleteSuggestion(suggestion)
-                            } label: {
-                                HStack {
-                                    Text("\(prefix)\(suggestion)")
-                                        .font(PlainType.taskBody)
-                                        .foregroundStyle(syntaxColor)
-                                    Spacer()
-                                    if index < 3 && isRecentTag(suggestion, prefix: autocompletePrefix) {
-                                        Text("recent")
-                                            .font(PlainType.taskMeta)
-                                            .foregroundStyle(PlainTokens.TextToken.muted)
-                                    }
-                                }
-                                .padding(.horizontal, Spacing.lg)
-                                .padding(.vertical, Spacing.md)
-                                .background(index == autocompleteIndex ? PlainTokens.Surface.hover : Color.clear)
-                            }
-                            .buttonStyle(.plain)
-                            if index < autocompleteSuggestions.count - 1 {
-                                Divider()
-                            }
-                        }
-                    }
-                    .background(PlainTokens.Surface.input)
-                    .clipShape(RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: Radius.md, style: .continuous)
-                            .stroke(PlainTokens.Border.input, lineWidth: 1)
-                    )
-                    .shadow(color: Color.black.opacity(0.1), radius: 6, x: 0, y: 3)
-                    .frame(maxWidth: 260)
-                    .offset(y: Measurement.inputBarHeight + 4)
-                    .zIndex(100)
+                AutocompleteSuggestionPopup(engine: autocomplete) { suggestion in
+                    autocomplete.acceptSuggestion(in: &newTaskText)
                 }
+                .offset(y: Measurement.inputBarHeight + 4)
+                .zIndex(100)
             }
             .overlay(alignment: .topTrailing) {
-                if isDueDatePickerPresented {
-                    VStack(spacing: 0) {
-                        HStack {
-                            Text("Due Date")
-                                .font(PlainType.sidebarLabel)
-                                .foregroundStyle(PlainTokens.TextToken.primary)
-                            Spacer()
-                            Button {
-                                isDueDatePickerPresented = false
-                            } label: {
-                                Image(systemName: "xmark.circle.fill")
-                                    .foregroundStyle(PlainTokens.TextToken.muted)
-                            }
-                            .buttonStyle(.plain)
-                        }
-                        .padding(.horizontal, Spacing.lg)
-                        .padding(.top, Spacing.lg)
-                        .padding(.bottom, Spacing.sm)
-
-                        DatePicker(
-                            "Due date",
-                            selection: $dueDatePickerValue,
-                            displayedComponents: .date
-                        )
-                        .datePickerStyle(.graphical)
-                        .labelsHidden()
-                        .padding(.horizontal, Spacing.sm)
-
-                        Divider()
-                            .padding(.horizontal, Spacing.lg)
-
-                        HStack(spacing: Spacing.md) {
-                            Button("Today") {
-                                insertDueDate(Date())
-                            }
-                            .buttonStyle(.plain)
-                            .font(PlainType.taskMeta)
-                            .foregroundStyle(PlainTokens.Syntax.context)
-
-                            Button("Tomorrow") {
-                                insertDueDate(Calendar.current.date(byAdding: .day, value: 1, to: Date()) ?? Date())
-                            }
-                            .buttonStyle(.plain)
-                            .font(PlainType.taskMeta)
-                            .foregroundStyle(PlainTokens.Syntax.context)
-
-                            Spacer()
-
-                            Button("Set Date") {
-                                insertDueDate(dueDatePickerValue)
-                            }
-                            .buttonStyle(.borderedProminent)
-                            .controlSize(.small)
-                        }
-                        .padding(.horizontal, Spacing.lg)
-                        .padding(.vertical, Spacing.md)
-                    }
-                    .background(.regularMaterial)
-                    .clipShape(RoundedRectangle(cornerRadius: Radius.lg, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: Radius.lg, style: .continuous)
-                            .stroke(PlainTokens.Border.input, lineWidth: 0.5)
-                    )
-                    .shadow(color: Color.black.opacity(0.15), radius: 12, x: 0, y: 4)
-                    .frame(width: 280)
-                    .offset(y: Measurement.inputBarHeight + 4)
-                    .zIndex(100)
+                DueDatePickerPopup(engine: autocomplete) { date in
+                    autocomplete.insertDueDate(date, into: &newTaskText)
                 }
+                .offset(y: Measurement.inputBarHeight + 4)
+                .zIndex(100)
             }
             .padding(.horizontal, Spacing.xl)
             .padding(.top, Spacing.xl)
@@ -1635,173 +1541,14 @@ struct PlainShellView: View {
     private func submitNewTask() {
         let text = newTaskText
         guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
-        trackRecentTags(in: text)
+        autocomplete.trackRecentTags(in: text)
         model.addTask(rawText: text, undoManager: undoManager)
         newTaskText = ""
-        autocompleteSuggestions = []
-        autocompletePrefix = nil
-        isDueDatePickerPresented = false
+        autocomplete.dismiss()
+        autocomplete.isDueDatePickerPresented = false
         flashHighlight(for: model.selectedRowID)
     }
 
-    // MARK: - Tag Autocomplete (@context, +project) & Due Date Picker
-
-    private static let recentContextsKey = "PlainRecentContexts"
-    private static let recentProjectsKey = "PlainRecentProjects"
-    private static let maxRecentTags = 10
-
-    private func updateAutocompleteSuggestions(for text: String) {
-        // Check for due: trigger first
-        if text.hasSuffix("due:") || text.contains(" due:") {
-            let trimmed = text.trimmingCharacters(in: .whitespaces)
-            if trimmed.hasSuffix("due:") {
-                isDueDatePickerPresented = true
-                dueDatePickerValue = Date()
-                autocompleteSuggestions = []
-                return
-            }
-        }
-
-        isDueDatePickerPresented = false
-
-        // Check for @context or +project token
-        if let (range, prefix) = findActiveTagToken(in: text) {
-            let partial = String(text[range]).lowercased()
-            let allTags: [String]
-            let recentKey: String
-
-            if prefix == "@" {
-                allTags = model.contextCounts.map(\.name)
-                recentKey = Self.recentContextsKey
-            } else {
-                allTags = model.projectCounts.map(\.name)
-                recentKey = Self.recentProjectsKey
-            }
-
-            guard !allTags.isEmpty else {
-                autocompleteSuggestions = []
-                autocompletePrefix = nil
-                return
-            }
-
-            let recentTags = UserDefaults.standard.stringArray(forKey: recentKey) ?? []
-            let matching = partial.isEmpty ? allTags : allTags.filter { $0.lowercased().hasPrefix(partial) }
-
-            guard !matching.isEmpty else {
-                autocompleteSuggestions = []
-                autocompletePrefix = nil
-                return
-            }
-
-            let matchingSet = Set(matching)
-            let recentMatching = recentTags.filter { matchingSet.contains($0) }
-            let topRecent = Array(recentMatching.prefix(3))
-            let topRecentSet = Set(topRecent)
-            let remaining = matching.filter { !topRecentSet.contains($0) }.sorted()
-
-            autocompleteSuggestions = topRecent + remaining
-            autocompleteIndex = 0
-            autocompletePrefix = Character(prefix)
-        } else {
-            autocompleteSuggestions = []
-            autocompletePrefix = nil
-        }
-    }
-
-    private func findActiveTagToken(in text: String) -> (Range<String.Index>, String)? {
-        // Check both @ and + — whichever appears last and is active
-        let atResult = findActivePrefixToken(in: text, prefix: "@")
-        let plusResult = findActivePrefixToken(in: text, prefix: "+")
-
-        switch (atResult, plusResult) {
-        case let (.some(atRange), .some(plusRange)):
-            // Return whichever is later in the string
-            return atRange.lowerBound > plusRange.lowerBound ? (atRange, "@") : (plusRange, "+")
-        case let (.some(atRange), .none):
-            return (atRange, "@")
-        case let (.none, .some(plusRange)):
-            return (plusRange, "+")
-        case (.none, .none):
-            return nil
-        }
-    }
-
-    private func findActivePrefixToken(in text: String, prefix: String) -> Range<String.Index>? {
-        let prefixChar = prefix.first!
-        guard let prefixIndex = text.lastIndex(of: prefixChar) else { return nil }
-        let isAtStart = prefixIndex == text.startIndex
-        let precededBySpace = !isAtStart && text[text.index(before: prefixIndex)] == " "
-        guard isAtStart || precededBySpace else { return nil }
-
-        let afterPrefix = text.index(after: prefixIndex)
-        let rest = text[afterPrefix...]
-        if rest.contains(" ") { return nil }
-
-        return afterPrefix..<text.endIndex
-    }
-
-    private func acceptAutocompleteSuggestion(_ suggestion: String) {
-        guard let (range, prefix) = findActiveTagToken(in: newTaskText) else { return }
-        let prefixIndex = newTaskText.index(before: range.lowerBound)
-        let before = newTaskText[newTaskText.startIndex..<prefixIndex]
-        newTaskText = before + "\(prefix)\(suggestion) "
-        autocompleteSuggestions = []
-        autocompletePrefix = nil
-    }
-
-    private func isRecentTag(_ tag: String, prefix: Character?) -> Bool {
-        let key = prefix == "+" ? Self.recentProjectsKey : Self.recentContextsKey
-        let recent = UserDefaults.standard.stringArray(forKey: key) ?? []
-        return recent.prefix(3).contains(tag)
-    }
-
-    private func trackRecentTags(in text: String) {
-        let words = text.split(separator: " ")
-        var contexts: [String] = []
-        var projects: [String] = []
-
-        for word in words {
-            if word.hasPrefix("@"), word.count > 1 {
-                contexts.append(String(word.dropFirst()))
-            } else if word.hasPrefix("+"), word.count > 1 {
-                projects.append(String(word.dropFirst()))
-            }
-        }
-
-        if !contexts.isEmpty {
-            updateRecentList(key: Self.recentContextsKey, newItems: contexts)
-        }
-        if !projects.isEmpty {
-            updateRecentList(key: Self.recentProjectsKey, newItems: projects)
-        }
-    }
-
-    private func updateRecentList(key: String, newItems: [String]) {
-        var recent = UserDefaults.standard.stringArray(forKey: key) ?? []
-        for item in newItems.reversed() {
-            recent.removeAll { $0 == item }
-            recent.insert(item, at: 0)
-        }
-        if recent.count > Self.maxRecentTags {
-            recent = Array(recent.prefix(Self.maxRecentTags))
-        }
-        UserDefaults.standard.set(recent, forKey: key)
-    }
-
-    private func insertDueDate(_ date: Date) {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        let dateString = formatter.string(from: date)
-
-        // Replace "due:" at the end of text with "due:YYYY-MM-DD "
-        if let range = newTaskText.range(of: "due:", options: .backwards) {
-            newTaskText = newTaskText[newTaskText.startIndex..<range.lowerBound] + "due:\(dateString) "
-        } else {
-            newTaskText += " due:\(dateString) "
-        }
-
-        isDueDatePickerPresented = false
-    }
 
     private func flashHighlight(for id: LineIdentity?) {
         guard let id else { return }
