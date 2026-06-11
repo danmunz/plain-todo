@@ -38,6 +38,8 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.danmunz.Plain
         PRODUCT_NAME: Plain
+        MARKETING_VERSION: 0.0.0-dev
+        CURRENT_PROJECT_VERSION: 0
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_NSPrincipalClass: NSApplication
         INFOPLIST_KEY_NSHumanReadableCopyright: ''
