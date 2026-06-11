@@ -86,12 +86,18 @@ struct PlainShellView: View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
             List(selection: $model.selection) {
                 Section {
-                    SidebarRow(title: "Inbox", count: model.inboxCount)
+                    SidebarRow(title: "Inbox", count: model.inboxCount, icon: "tray")
                         .tag(SidebarSelection.inbox)
-                    SidebarRow(title: "Today", count: model.todayCount)
+                    SidebarRow(title: "Today", count: model.todayCount, icon: "sun.max")
                         .tag(SidebarSelection.today)
-                    SidebarRow(title: "Overdue", count: model.overdueCount, isOverdue: model.overdueCount > 0)
-                        .tag(SidebarSelection.overdue)
+                    SidebarRow(
+                        title: "Overdue",
+                        count: model.overdueCount,
+                        icon: "clock.badge.exclamationmark",
+                        iconTint: model.overdueCount > 0 ? PlainTokens.Status.overdue : PlainTokens.TextToken.secondary,
+                        isOverdue: model.overdueCount > 0
+                    )
+                    .tag(SidebarSelection.overdue)
                 } header: {
                     SidebarSectionHeader("SMART FILTERS")
                 }
@@ -99,27 +105,37 @@ struct PlainShellView: View {
                 if !model.projectCounts.isEmpty {
                     Section {
                         ForEach(model.projectCounts, id: \.name) { project in
-                            SidebarRow(title: project.name, count: project.count)
-                                .tag(SidebarSelection.project(project.name))
+                            SidebarRow(
+                                title: project.name,
+                                count: project.count,
+                                sigil: "+",
+                                sigilTint: PlainTokens.Syntax.project
+                            )
+                            .tag(SidebarSelection.project(project.name))
                         }
                     } header: {
-                        SidebarSectionHeader("+PROJECTS")
+                        SidebarSectionHeader("PROJECTS")
                     }
                 }
 
                 if !model.contextCounts.isEmpty {
                     Section {
                         ForEach(model.contextCounts, id: \.name) { context in
-                            SidebarRow(title: context.name, count: context.count)
-                                .tag(SidebarSelection.context(context.name))
+                            SidebarRow(
+                                title: context.name,
+                                count: context.count,
+                                sigil: "@",
+                                sigilTint: PlainTokens.Syntax.context
+                            )
+                            .tag(SidebarSelection.context(context.name))
                         }
                     } header: {
-                        SidebarSectionHeader("@CONTEXTS")
+                        SidebarSectionHeader("CONTEXTS")
                     }
                 }
 
                 Section {
-                    SidebarRow(title: "Done", count: model.doneCount)
+                    SidebarRow(title: "Done", count: model.doneCount, icon: "archivebox")
                         .tag(SidebarSelection.done)
                 } header: {
                     SidebarSectionHeader("ARCHIVE")
@@ -270,13 +286,28 @@ struct PlainShellView: View {
             Spacer()
 
             VStack(spacing: Spacing.xl) {
+                Text("A TODO.TXT CLIENT FOR MACOS")
+                    .font(PlainType.mastheadDate)
+                    .tracking(Tracking.mastheadDate)
+                    .foregroundStyle(PlainTokens.TextToken.muted)
+
                 Text("plain")
                     .font(PlainType.onboardingHeading)
                     .tracking(Tracking.onboardingHeading)
                     .foregroundStyle(PlainTokens.TextToken.primary)
 
-                Text("A todo.txt client for macOS.\nReads your file. That's it, really.")
-                    .font(PlainType.onboardingBody)
+                // Short double rule, the same editorial signature as the masthead.
+                VStack(spacing: 2.5) {
+                    Rectangle()
+                        .fill(PlainTokens.Border.section)
+                        .frame(width: 64, height: 1.5)
+                    Rectangle()
+                        .fill(PlainTokens.Border.section)
+                        .frame(width: 64, height: 0.5)
+                }
+
+                Text("Reads your file. That's it, really.")
+                    .font(PlainType.emptyState(size: 15))
                     .foregroundStyle(PlainTokens.TextToken.secondary)
                     .multilineTextAlignment(.center)
                     .lineSpacing(6)
@@ -319,7 +350,14 @@ struct PlainShellView: View {
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(PlainTokens.Surface.canvas)
+        .background(
+            LinearGradient(
+                colors: [PlainTokens.Surface.canvasTop, PlainTokens.Surface.canvas],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
+        )
         .accessibilityIdentifier("plain.onboarding")
     }
 
@@ -347,10 +385,93 @@ struct PlainShellView: View {
                 activeTasksDetailView
             }
         }
+        .background(
+            LinearGradient(
+                colors: [PlainTokens.Surface.canvasTop, PlainTokens.Surface.canvas],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
+        )
+    }
+
+    // MARK: - Masthead
+
+    private var mastheadTitleText: Text {
+        switch model.selection {
+        case .inbox:
+            return Text("Inbox")
+        case .today:
+            return Text("Today")
+        case .overdue:
+            return Text("Overdue")
+        case .done:
+            return Text("Archive")
+        case let .project(name):
+            return Text("+").foregroundColor(PlainTokens.Syntax.project) + Text(name)
+        case let .context(name):
+            return Text("@").foregroundColor(PlainTokens.Syntax.context) + Text(name)
+        }
+    }
+
+    private var mastheadDateText: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "EEEE, MMMM d"
+        return formatter.string(from: Date()).uppercased()
+    }
+
+    private var mastheadCountText: String {
+        let count = model.visibleRows.count
+        if model.hasActiveSearch {
+            return count == 1 ? "one match" : "\(count) matches"
+        }
+        switch count {
+        case 0: return "all clear"
+        case 1: return "a single task"
+        default: return "\(count) tasks"
+        }
+    }
+
+    /// Editorial view header: Didot title, small-caps date, double hairline rule.
+    private func masthead(title: Text, subtitle: String) -> some View {
+        VStack(alignment: .leading, spacing: Spacing.lg) {
+            HStack(alignment: .lastTextBaseline) {
+                title
+                    .font(PlainType.mastheadTitle)
+                    .foregroundStyle(PlainTokens.TextToken.primary)
+
+                Spacer()
+
+                VStack(alignment: .trailing, spacing: Spacing.sm) {
+                    Text(mastheadDateText)
+                        .font(PlainType.mastheadDate)
+                        .tracking(Tracking.mastheadDate)
+                        .foregroundStyle(PlainTokens.TextToken.muted)
+                    Text(subtitle)
+                        .font(PlainType.mastheadMeta)
+                        .foregroundStyle(PlainTokens.TextToken.secondary)
+                }
+            }
+
+            // Classic double rule: heavy line over hairline.
+            VStack(spacing: 2.5) {
+                Rectangle()
+                    .fill(PlainTokens.Border.section)
+                    .frame(height: 1.5)
+                Rectangle()
+                    .fill(PlainTokens.Border.section)
+                    .frame(height: 0.5)
+            }
+        }
+        .padding(.horizontal, Spacing.xl)
+        .padding(.top, Spacing.xxl)
+        .accessibilityElement(children: .combine)
     }
 
     private var activeTasksDetailView: some View {
         VStack(alignment: .leading, spacing: 0) {
+            masthead(title: mastheadTitleText, subtitle: mastheadCountText)
+
             if let transientError = model.transientError {
                 Text(transientError)
                     .font(PlainType.taskMeta)
@@ -365,10 +486,11 @@ struct PlainShellView: View {
                     .padding(.top, Spacing.lg)
             }
 
-            HStack(spacing: Spacing.sm) {
+            HStack(spacing: Spacing.md) {
                 Image(systemName: "plus")
-                    .foregroundStyle(PlainTokens.TextToken.muted)
+                    .foregroundStyle(focusedField == .newTask ? PlainTokens.accent : PlainTokens.TextToken.muted)
                     .font(PlainType.iconMedium)
+                    .animation(Anim.fastEaseOut(reduceMotion: reduceMotion), value: focusedField)
 
                 TextField("Add a task...", text: $newTaskText)
                     .textFieldStyle(.plain)
@@ -449,11 +571,17 @@ struct PlainShellView: View {
             .frame(height: Measurement.inputBarHeight)
             .background(PlainTokens.Surface.input)
             .overlay(
-                RoundedRectangle(cornerRadius: Radius.md, style: .continuous)
-                    .stroke(focusedField == .newTask ? PlainTokens.Border.inputFocused : PlainTokens.Border.input, lineWidth: focusedField == .newTask ? 2 : 1)
+                RoundedRectangle(cornerRadius: Radius.lg, style: .continuous)
+                    .stroke(focusedField == .newTask ? PlainTokens.Border.inputFocused : PlainTokens.Border.input, lineWidth: focusedField == .newTask ? 1.5 : 1)
             )
-            .clipShape(RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
-            .shadow(color: Color.black.opacity(0.04), radius: 2, x: 0, y: 1)
+            .clipShape(RoundedRectangle(cornerRadius: Radius.lg, style: .continuous))
+            .shadow(
+                color: focusedField == .newTask ? PlainTokens.accent.opacity(0.22) : Color.black.opacity(0.05),
+                radius: focusedField == .newTask ? 10 : 3,
+                x: 0,
+                y: focusedField == .newTask ? 3 : 1
+            )
+            .animation(Anim.normalEaseInOut(reduceMotion: reduceMotion), value: focusedField == .newTask)
             .overlay(alignment: .topLeading) {
                 if !autocompleteSuggestions.isEmpty {
                     let prefix = autocompletePrefix.map(String.init) ?? ""
@@ -618,7 +746,7 @@ struct PlainShellView: View {
                                     activeTaskRow(row)
                                 }
                             } header: {
-                                GroupHeader(title: title)
+                                GroupHeader(title: title, count: group.rows.count)
                             }
                         } else {
                             ForEach(group.rows) { row in
@@ -630,7 +758,6 @@ struct PlainShellView: View {
             }
             .listStyle(.inset)
             .scrollContentBackground(.hidden)
-            .background(PlainTokens.Surface.canvas)
             .onMoveCommand { direction in
                 switch direction {
                 case .down:
@@ -688,6 +815,9 @@ struct PlainShellView: View {
             .overlay(alignment: .bottom) {
                 if let toastMessage {
                     HStack(spacing: Spacing.md) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(PlainType.iconSmall)
+                            .foregroundStyle(PlainTokens.Status.completed)
                         Text(toastMessage)
                             .font(PlainType.toastMessage)
                         Button("Undo") {
@@ -709,19 +839,27 @@ struct PlainShellView: View {
                 }
             }
 
-            HStack {
-                Text(model.statusText)
-                    .font(PlainType.statusBar)
-                    .foregroundStyle(PlainTokens.TextToken.muted)
-                Spacer()
-            }
-            .padding(.horizontal, Spacing.xl)
-            .frame(height: Measurement.statusBarHeight)
-            .overlay(alignment: .top) {
-                Rectangle()
-                    .fill(PlainTokens.Border.row)
-                    .frame(height: Measurement.rowSeparatorThickness)
-            }
+            colophonBar(model.statusText)
+        }
+    }
+
+    /// Centered, letterspaced footer — styled like a book colophon.
+    private func colophonBar(_ text: String) -> some View {
+        HStack {
+            Spacer()
+            Text(text.uppercased())
+                .font(PlainType.colophon)
+                .tracking(Tracking.colophon)
+                .foregroundStyle(PlainTokens.TextToken.muted)
+                .lineLimit(1)
+            Spacer()
+        }
+        .padding(.horizontal, Spacing.xl)
+        .frame(height: Measurement.statusBarHeight)
+        .overlay(alignment: .top) {
+            Rectangle()
+                .fill(PlainTokens.Border.row)
+                .frame(height: Measurement.rowSeparatorThickness)
         }
     }
 
@@ -748,7 +886,7 @@ struct PlainShellView: View {
                     }
                 }
             } label: {
-                completionCircle(row: row)
+                completionCircle(row: row, isRowHovered: hoveredRowID == row.id)
                     .scaleEffect(completingRowID == row.id ? 1.15 : 1.0)
                     .animation(reduceMotion ? nil : Anim.completionCircle, value: completingRowID == row.id)
             }
@@ -781,15 +919,7 @@ struct PlainShellView: View {
             } else {
                 // Priority badge
                 if let priority = row.priority {
-                    Text(priority)
-                        .font(PlainType.priorityBadge)
-                        .foregroundStyle(priorityColor(priority))
-                        .padding(.horizontal, Spacing.sm)
-                        .frame(height: Measurement.priorityBadgeHeight)
-                        .background(
-                            RoundedRectangle(cornerRadius: Radius.sm, style: .continuous)
-                                .fill(priorityBgColor(priority))
-                        )
+                    PriorityBadge(priority: priority)
                 }
 
                 // Task text with syntax highlighting
@@ -841,9 +971,13 @@ struct PlainShellView: View {
         }
         .background {
             if highlightedRowID == row.id {
-                PlainTokens.accent.opacity(Opacity.highlightRow)
+                RoundedRectangle(cornerRadius: Radius.md, style: .continuous)
+                    .fill(PlainTokens.accent.opacity(Opacity.highlightRow))
+                    .padding(.horizontal, Spacing.md)
             } else if hoveredRowID == row.id {
-                PlainTokens.Surface.hover
+                RoundedRectangle(cornerRadius: Radius.md, style: .continuous)
+                    .fill(PlainTokens.Surface.hover)
+                    .padding(.horizontal, Spacing.md)
             }
         }
         .contextMenu {
@@ -897,8 +1031,9 @@ struct PlainShellView: View {
         .tag(row.id)
     }
 
-    private func completionCircle(row: PlainShellModel.Row) -> some View {
+    private func completionCircle(row: PlainShellModel.Row, isRowHovered: Bool = false) -> some View {
         let isAnimatingComplete = completingRowID == row.id
+        let ringColor = row.priority != nil ? priorityColor(row.priority!) : PlainTokens.TextToken.muted
         return ZStack {
             if row.isCompleted || isAnimatingComplete {
                 Circle()
@@ -909,43 +1044,38 @@ struct PlainShellView: View {
                     .foregroundStyle(PlainTokens.TextToken.inverse)
             } else {
                 Circle()
-                    .stroke(
-                        row.priority != nil ? priorityColor(row.priority!) : PlainTokens.TextToken.muted,
-                        lineWidth: 1.5
-                    )
+                    .fill(isRowHovered ? ringColor.opacity(0.08) : Color.clear)
                     .frame(width: Measurement.completionCircleDiameter, height: Measurement.completionCircleDiameter)
+                Circle()
+                    .stroke(ringColor.opacity(isRowHovered ? 1.0 : 0.75), lineWidth: 1.5)
+                    .frame(width: Measurement.completionCircleDiameter, height: Measurement.completionCircleDiameter)
+                // Ghost check previews the action on hover.
+                Image(systemName: "checkmark")
+                    .font(PlainType.iconSmall)
+                    .foregroundStyle(ringColor.opacity(isRowHovered ? 0.55 : 0.0))
             }
         }
+        .animation(Anim.fastEaseOut(reduceMotion: reduceMotion), value: isRowHovered)
     }
 
     private var archiveDetailView: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack(alignment: .firstTextBaseline) {
-                VStack(alignment: .leading, spacing: Spacing.sm) {
-                    Text("ARCHIVE")
-                        .font(PlainType.groupHeader)
-                        .tracking(Tracking.sidebarSection)
-                        .foregroundStyle(PlainTokens.Syntax.project)
-                    Text(model.archiveDescription)
-                        .font(PlainType.taskMeta)
-                        .foregroundStyle(PlainTokens.TextToken.muted)
-                }
-                .padding(.leading, Spacing.md)
-                .overlay(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 1, style: .continuous)
-                        .fill(PlainTokens.Syntax.project)
-                        .frame(width: 2)
-                }
+            masthead(title: Text("Archive"), subtitle: model.archiveDescription)
 
-                Spacer()
-
-                Button("Back to tasks") {
+            HStack {
+                Button {
                     model.selection = .inbox
+                } label: {
+                    Label("Back to tasks", systemImage: "arrow.left")
+                        .font(PlainType.taskMeta)
+                        .foregroundStyle(PlainTokens.accent)
                 }
+                .buttonStyle(.plain)
                 .accessibilityIdentifier("plain.done.back")
+                Spacer()
             }
-            .padding(.horizontal, Spacing.xxl)
-            .padding(.top, Spacing.xxl)
+            .padding(.horizontal, Spacing.xl)
+            .padding(.top, Spacing.lg)
 
             if model.hasActiveSearch && !isSearchPresented {
                 searchFilterPill
@@ -965,15 +1095,7 @@ struct PlainShellView: View {
                     }
 
                     if let priority = row.priority {
-                        Text(priority)
-                            .font(PlainType.priorityBadge)
-                            .foregroundStyle(priorityColor(priority))
-                            .padding(.horizontal, Spacing.sm)
-                            .frame(height: Measurement.priorityBadgeHeight)
-                            .background(
-                                RoundedRectangle(cornerRadius: Radius.sm, style: .continuous)
-                                    .fill(priorityBgColor(priority))
-                            )
+                        PriorityBadge(priority: priority)
                     }
 
                     SyntaxHighlightedText(
@@ -996,7 +1118,6 @@ struct PlainShellView: View {
             }
             .listStyle(.inset)
             .scrollContentBackground(.hidden)
-            .background(PlainTokens.Surface.canvas)
             .accessibilityIdentifier("plain.done.list")
             .onExitCommand {
                 if isSearchPresented || focusedField == .search {
@@ -1015,41 +1136,18 @@ struct PlainShellView: View {
                 }
             }
 
-            HStack {
-                Text(model.archiveStatusText)
-                    .font(PlainType.statusBar)
-                    .foregroundStyle(PlainTokens.TextToken.muted)
-                Spacer()
-            }
-            .padding(.horizontal, Spacing.xl)
-            .frame(height: Measurement.statusBarHeight)
-            .overlay(alignment: .top) {
-                Rectangle()
-                    .fill(PlainTokens.Border.row)
-                    .frame(height: Measurement.rowSeparatorThickness)
-            }
+            colophonBar(model.archiveStatusText)
         }
     }
 
     private var scratchPadDetailView: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack(alignment: .firstTextBaseline) {
-                VStack(alignment: .leading, spacing: Spacing.sm) {
-                    Text("SCRATCH PAD")
-                        .font(PlainType.groupHeader)
-                        .tracking(Tracking.sidebarSection)
-                        .foregroundStyle(PlainTokens.Syntax.project)
+            masthead(title: Text("Scratch Pad"), subtitle: "the raw file, in your hands")
 
-                    Text("Edit the full todo.txt directly. Save reparses and writes through the coordinated store.")
-                        .font(PlainType.taskMeta)
-                        .foregroundStyle(PlainTokens.TextToken.muted)
-                }
-                .padding(.leading, Spacing.md)
-                .overlay(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 1, style: .continuous)
-                        .fill(PlainTokens.Syntax.project)
-                        .frame(width: 2)
-                }
+            HStack {
+                Text("Edit the full todo.txt directly. Save reparses and writes through the coordinated store.")
+                    .font(PlainType.taskMeta)
+                    .foregroundStyle(PlainTokens.TextToken.muted)
 
                 Spacer()
 
@@ -1063,7 +1161,7 @@ struct PlainShellView: View {
                 .disabled(!model.isEditable)
             }
             .padding(.horizontal, Spacing.xl)
-            .padding(.top, Spacing.xl)
+            .padding(.top, Spacing.lg)
 
             if model.hasExternalTodoConflict {
                 conflictBanner
@@ -1100,7 +1198,6 @@ struct PlainShellView: View {
             .padding(.horizontal, Spacing.xl)
             .padding(.bottom, Spacing.lg)
         }
-        .background(PlainTokens.Surface.canvas)
     }
 
     private var conflictBanner: some View {
@@ -1345,7 +1442,7 @@ struct PlainShellView: View {
     private var searchOverlay: some View {
         HStack(spacing: Spacing.lg) {
             Image(systemName: "magnifyingglass")
-                .foregroundStyle(PlainTokens.Syntax.project)
+                .foregroundStyle(PlainTokens.accent)
                 .font(PlainType.iconLarge)
 
             TextField("Search tasks", text: $searchText)
@@ -1401,7 +1498,7 @@ struct PlainShellView: View {
         HStack(spacing: Spacing.md) {
             Image(systemName: "magnifyingglass")
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(PlainTokens.Syntax.project)
+                .foregroundStyle(PlainTokens.accent)
             Text("Showing results for \"\(model.activeSearchQuery)\"")
                 .font(PlainType.taskMeta)
                 .foregroundStyle(PlainTokens.TextToken.secondary)
@@ -1788,6 +1885,26 @@ private struct HighlightedText: View {
     }
 }
 
+/// A square serif letter chip — set like a drop cap, tinted by priority.
+private struct PriorityBadge: View {
+    let priority: String
+
+    var body: some View {
+        Text(priority)
+            .font(PlainType.priorityGlyph)
+            .foregroundStyle(priorityColor(priority))
+            .frame(width: 21, height: 21)
+            .background(
+                RoundedRectangle(cornerRadius: Radius.sm + 1, style: .continuous)
+                    .fill(priorityBgColor(priority))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: Radius.sm + 1, style: .continuous)
+                    .stroke(priorityColor(priority).opacity(0.25), lineWidth: 0.5)
+            )
+    }
+}
+
 private func priorityColor(_ priority: String) -> Color {
     switch priority {
     case "A": return PlainTokens.Priority.a
@@ -2069,22 +2186,46 @@ private struct SyntaxHighlightedText: View {
 
 private struct GroupHeader: View {
     let title: String
+    var count: Int = 0
+
+    /// Each group carries the color of what it represents — priorities,
+    /// urgency buckets, projects, contexts — instead of a single generic hue.
+    private var tint: Color {
+        switch title {
+        case "Priority A", "Overdue": return PlainTokens.Priority.a
+        case "Priority B": return PlainTokens.Priority.b
+        case "Priority C": return PlainTokens.Priority.c
+        case "Today": return PlainTokens.Status.today
+        default:
+            if title.hasPrefix("+") { return PlainTokens.Syntax.project }
+            if title.hasPrefix("@") { return PlainTokens.Syntax.context }
+            return PlainTokens.TextToken.muted
+        }
+    }
 
     var body: some View {
         HStack(spacing: Spacing.md) {
+            Circle()
+                .fill(tint)
+                .frame(width: 5, height: 5)
             Text(title.uppercased())
                 .font(PlainType.groupHeader)
                 .tracking(Tracking.groupHeader)
-                .foregroundStyle(PlainTokens.Syntax.project)
+                .foregroundStyle(tint)
             Rectangle()
                 .fill(
                     LinearGradient(
-                        colors: [PlainTokens.Border.section, PlainTokens.Border.section.opacity(0)],
+                        colors: [tint.opacity(0.35), PlainTokens.Border.section.opacity(0)],
                         startPoint: .leading,
                         endPoint: .trailing
                     )
                 )
                 .frame(height: 1)
+            if count > 0 {
+                Text("\(count)")
+                    .font(PlainType.sidebarCount.monospacedDigit())
+                    .foregroundStyle(PlainTokens.TextToken.muted)
+            }
         }
         .frame(height: Measurement.groupHeaderHeight)
         .textCase(nil)
@@ -2114,13 +2255,14 @@ private struct PlaceholderCard: View {
                 .animation(reduceMotion ? nil : .easeOut(duration: 0.4), value: iconAppeared)
 
             Text(title)
-                .font(PlainType.sidebarLabel)
+                .font(PlainType.emptyStateTitle)
                 .foregroundStyle(PlainTokens.TextToken.secondary)
 
             Text(message)
-                .font(PlainType.taskMeta)
+                .font(PlainType.emptyState(size: 13))
                 .foregroundStyle(PlainTokens.TextToken.muted)
                 .multilineTextAlignment(.center)
+                .lineSpacing(4)
 
             if let primaryActionTitle, let primaryAction {
                 HStack(spacing: Spacing.lg) {
@@ -2152,30 +2294,47 @@ private struct SidebarSectionHeader: View {
         Text(text)
             .font(PlainType.sidebarSection)
             .tracking(Tracking.sidebarSection)
-            .foregroundStyle(PlainTokens.Syntax.project)
+            .foregroundStyle(PlainTokens.TextToken.muted)
     }
 }
 
 private struct SidebarRow: View {
     let title: String
     let count: Int
+    /// SF Symbol shown for smart filters.
+    var icon: String?
+    var iconTint: Color = PlainTokens.TextToken.secondary
+    /// Serif sigil ("+" or "@") shown for projects and contexts.
+    var sigil: String?
+    var sigilTint: Color = PlainTokens.TextToken.secondary
     var isOverdue = false
 
     var body: some View {
-        HStack {
+        HStack(spacing: Spacing.md) {
+            if let icon {
+                Image(systemName: icon)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(iconTint)
+                    .frame(width: 16)
+            } else if let sigil {
+                Text(sigil)
+                    .font(PlainType.priorityGlyph)
+                    .foregroundStyle(sigilTint)
+                    .frame(width: 16)
+            }
             Text(title)
                 .font(PlainType.sidebarLabel)
             Spacer()
             if isOverdue && count > 0 {
                 Text("\(count)")
-                    .font(PlainType.sidebarCount)
+                    .font(PlainType.sidebarCount.monospacedDigit())
                     .foregroundStyle(PlainTokens.TextToken.inverse)
                     .padding(.horizontal, Spacing.sm + 2)
                     .padding(.vertical, 1)
                     .background(PlainTokens.Status.overdue, in: Capsule())
-            } else {
+            } else if count > 0 {
                 Text("\(count)")
-                    .font(PlainType.sidebarCount)
+                    .font(PlainType.sidebarCount.monospacedDigit())
                     .foregroundStyle(PlainTokens.TextToken.muted)
             }
         }
@@ -2355,7 +2514,8 @@ final class PlainShellModel: ObservableObject {
     }
 
     var statusText: String {
-        "\(inboxCount) tasks · \(doneThisWeekCount) done this week · \(overdueCount) overdue"
+        let tasks = inboxCount == 1 ? "1 task" : "\(inboxCount) tasks"
+        return "\(tasks) · \(doneThisWeekCount) done this week · \(overdueCount) overdue"
     }
 
     var windowTitle: String {
@@ -2366,7 +2526,7 @@ final class PlainShellModel: ObservableObject {
     }
 
     var archiveStatusText: String {
-        "\(doneCount) archived tasks"
+        doneCount == 1 ? "1 archived task" : "\(doneCount) archived tasks"
     }
 
     var emptyStateTitle: String {

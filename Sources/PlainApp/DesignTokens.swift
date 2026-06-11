@@ -31,6 +31,8 @@ enum PlainTokens {
 
     enum Surface {
         static let canvas = Color(light: .hex(0xF0ECE4), dark: .hex(0x1C1B19))
+        /// Slightly lighter than canvas; used as the top stop of the detail-pane gradient.
+        static let canvasTop = Color(light: .hex(0xF6F2EA), dark: .hex(0x222120))
         static let sidebar = Color(light: .hex(0xE8E3D9), dark: .hex(0x242320))
         static let input = Color(light: .hex(0xFAF8F5), dark: .hex(0x2C2A27))
         static let hover = Color(light: .hex(0xE8E3D9), dark: .hex(0x2C2A27))
@@ -140,6 +142,18 @@ enum PlainType {
         .custom("Charter Italic", size: size)
     }
 
+    private static func didot(size: CGFloat) -> Font {
+        .custom("Didot", size: size)
+    }
+
+    private static func didotBold(size: CGFloat) -> Font {
+        .custom("Didot-Bold", size: size)
+    }
+
+    private static func didotItalic(size: CGFloat) -> Font {
+        .custom("Didot-Italic", size: size)
+    }
+
     // -- App chrome (SF Pro — native, functional) --
     static let windowTitle = Font.system(size: 13, weight: .semibold)
     static let sidebarSection = Font.system(size: 10, weight: .heavy)
@@ -163,8 +177,15 @@ enum PlainType {
     static let emptyState = charterItalic(size: 15)
 
     // -- Display (Didot — editorial, high-contrast) --
-    static let onboardingHeading = Font.custom("Didot", size: 48)
+    static let onboardingHeading = Font.custom("Didot", size: 56)
     static let onboardingBody = charter(size: 14)
+    static let mastheadTitle = didotBold(size: 30)
+    static let mastheadDate = Font.system(size: 10, weight: .semibold)
+    static let mastheadMeta = charterItalic(size: 13)
+    static let panelTitle = didotBold(size: 20)
+    static let emptyStateTitle = didotItalic(size: 22)
+    static let colophon = Font.system(size: 9.5, weight: .medium)
+    static let priorityGlyph = charterBold(size: 13)
 
     // -- Icons (SF Pro, sized for SF Symbols) --
     static let iconSmall = Font.system(size: 11, weight: .bold)
@@ -336,6 +357,8 @@ enum Tracking {
     static let sidebarSection: CGFloat = 2.0
     static let groupHeader: CGFloat = 1.5
     static let onboardingHeading: CGFloat = 0.5
+    static let mastheadDate: CGFloat = 1.8
+    static let colophon: CGFloat = 1.4
 }
 
 // MARK: - Color Helpers

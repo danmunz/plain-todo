@@ -194,49 +194,50 @@ private struct QuickAddPanelView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.lg) {
-            HStack(alignment: .firstTextBaseline) {
-                VStack(alignment: .leading, spacing: Spacing.xs) {
-                    Text("QUICK ADD")
-                        .font(PlainType.groupHeader)
-                        .tracking(Tracking.sidebarSection)
-                        .foregroundStyle(PlainTokens.Syntax.project)
-                    Text(controller.destinationDescription)
-                        .font(PlainType.taskMeta)
-                        .foregroundStyle(PlainTokens.TextToken.muted)
-                }
-                .padding(.leading, Spacing.md)
-                .overlay(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 1, style: .continuous)
-                        .fill(PlainTokens.Syntax.project)
-                        .frame(width: 2)
+            VStack(alignment: .leading, spacing: Spacing.md) {
+                HStack(alignment: .lastTextBaseline) {
+                    Text("Quick Add")
+                        .font(PlainType.panelTitle)
+                        .foregroundStyle(PlainTokens.TextToken.primary)
+
+                    Spacer()
+
+                    VStack(alignment: .trailing, spacing: Spacing.xs) {
+                        Text("CTRL · OPT · T")
+                            .font(PlainType.mastheadDate)
+                            .tracking(Tracking.mastheadDate)
+                            .foregroundStyle(PlainTokens.TextToken.muted)
+                        Text(controller.destinationDescription)
+                            .font(PlainType.mastheadMeta)
+                            .foregroundStyle(PlainTokens.TextToken.secondary)
+                    }
                 }
 
-                Spacer()
-
-                Text("Ctrl+Opt+T")
-                    .font(.system(size: 10, weight: .medium, design: .monospaced))
-                    .foregroundStyle(PlainTokens.TextToken.muted)
-                    .padding(.horizontal, Spacing.sm + 1)
-                    .padding(.vertical, Spacing.xs)
-                    .background(
-                        RoundedRectangle(cornerRadius: 3, style: .continuous)
-                            .fill(PlainTokens.Surface.hover)
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 3, style: .continuous)
-                            .stroke(PlainTokens.Border.row, lineWidth: 0.5)
-                    )
+                VStack(spacing: 2) {
+                    Rectangle()
+                        .fill(PlainTokens.Border.section)
+                        .frame(height: 1.5)
+                    Rectangle()
+                        .fill(PlainTokens.Border.section)
+                        .frame(height: 0.5)
+                }
             }
 
             TextField("Capture a task...", text: $controller.inputText)
                 .textFieldStyle(.plain)
                 .font(PlainType.taskBody)
                 .padding(.horizontal, Spacing.lg)
-                .padding(.vertical, Spacing.md)
-                .background(PlainTokens.Surface.input, in: RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
+                .padding(.vertical, Spacing.lg)
+                .background(PlainTokens.Surface.input, in: RoundedRectangle(cornerRadius: Radius.lg, style: .continuous))
                 .overlay(
-                    RoundedRectangle(cornerRadius: Radius.md, style: .continuous)
-                        .stroke(PlainTokens.Border.input, lineWidth: 1)
+                    RoundedRectangle(cornerRadius: Radius.lg, style: .continuous)
+                        .stroke(isInputFocused ? PlainTokens.Border.inputFocused : PlainTokens.Border.input, lineWidth: isInputFocused ? 1.5 : 1)
+                )
+                .shadow(
+                    color: isInputFocused ? PlainTokens.accent.opacity(0.18) : .clear,
+                    radius: 8,
+                    x: 0,
+                    y: 2
                 )
                 .focused($isInputFocused)
                 .onSubmit {
