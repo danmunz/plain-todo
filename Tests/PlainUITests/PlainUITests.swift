@@ -1,5 +1,6 @@
 import XCTest
 
+@MainActor
 final class PlainUITests: XCTestCase {
     func testAppLaunchesAndShowsWindow() {
         let app = XCUIApplication()
