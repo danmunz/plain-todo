@@ -10,19 +10,6 @@
     <sparkle:version>1.1.0</sparkle:version>
     <sparkle:shortVersionString>1.1.0</sparkle:shortVersionString>
     <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-    <pubDate>Thu, 11 Jun 2026 18:57:47 +0000</pubDate>
-    <enclosure
-      url="https://github.com/danmunz/plain-todo/releases/download/v1.1.0/Plain-v1.1.0-macOS.zip"
-      length="3789872"
-      type="application/octet-stream"
-      sparkle:edSignature="46HVL7vMEhkyvRUAMGnHs/QsMiWY/KARYO2YroLu3wmh9zzCVbe6yqls2vJpr9rUa2DLWfdtxRwYk6sIdWykBg=="
-    />
-  </item>
-    <item>
-    <title>Version 1.1.0</title>
-    <sparkle:version>1.1.0</sparkle:version>
-    <sparkle:shortVersionString>1.1.0</sparkle:shortVersionString>
-    <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
     <pubDate>Thu, 11 Jun 2026 20:15:31 +0000</pubDate>
     <enclosure
       url="https://github.com/danmunz/plain-todo/releases/download/v1.1.0/Plain-v1.1.0-macOS.zip"
