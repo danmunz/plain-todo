@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 private struct PlainFontSizeKey: EnvironmentKey {
-    static let defaultValue: Double = 13
+    static let defaultValue: Double = 15
 }
 
 extension EnvironmentValues {
@@ -158,7 +158,7 @@ final class PreferencesStore: ObservableObject {
         }
 
         if userDefaults.object(forKey: fontSizeKey) == nil {
-            self.fontSize = 13
+            self.fontSize = 15
         } else {
             self.fontSize = userDefaults.double(forKey: fontSizeKey)
         }

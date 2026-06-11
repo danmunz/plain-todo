@@ -166,6 +166,7 @@ struct PlainShellView: View {
             }
         }
         .navigationTitle(model.windowTitle)
+        .tint(PlainTokens.accent)
         .frame(minWidth: 760, minHeight: 440)
         .onChange(of: newTaskText) { _, updatedValue in
             model.updateDraftState(newTaskText: updatedValue, editingRowID: editingRowID, editingRawText: editingRawText)
@@ -865,8 +866,22 @@ struct PlainShellView: View {
 
     @Environment(\.plainFontSize) private var fontSize
 
+    /// When any visible row carries a priority, every row reserves the
+    /// marginal column so task text stays aligned down the page.
+    private var visibleRowsHavePriority: Bool {
+        model.visibleRows.contains { $0.priority != nil }
+    }
+
+    private var taskTextLeadingInset: CGFloat {
+        var inset = Spacing.xl + Measurement.completionCircleDiameter + Spacing.md
+        if visibleRowsHavePriority {
+            inset += Measurement.priorityMarginalWidth + Spacing.md
+        }
+        return inset
+    }
+
     private func activeTaskRow(_ row: PlainShellModel.Row) -> some View {
-        HStack(spacing: Spacing.sm) {
+        HStack(spacing: Spacing.md) {
             // Completion circle
             Button {
                 let wasCompleted = row.isCompleted
@@ -917,9 +932,13 @@ struct PlainShellView: View {
                     .font(PlainType.taskMeta)
                 }
             } else {
-                // Priority badge
-                if let priority = row.priority {
-                    PriorityBadge(priority: priority)
+                // Priority set as a bare letter in the margin, like marginalia
+                if visibleRowsHavePriority {
+                    Text(row.priority ?? " ")
+                        .font(PlainType.priorityMarginal)
+                        .foregroundStyle(row.priority.map(priorityColor) ?? .clear)
+                        .frame(width: Measurement.priorityMarginalWidth)
+                        .accessibilityHidden(row.priority == nil)
                 }
 
                 // Task text with syntax highlighting
@@ -937,8 +956,8 @@ struct PlainShellView: View {
                         Text(dueLabel)
                             .font(PlainType.taskDueDateUrgent)
                             .foregroundStyle(PlainTokens.TextToken.inverse)
-                            .padding(.horizontal, Spacing.sm + 1)
-                            .padding(.vertical, 1)
+                            .padding(.horizontal, Spacing.sm + 2)
+                            .padding(.vertical, 1.5)
                             .background(PlainTokens.Status.overdue, in: Capsule())
                     } else {
                         Text(dueLabel)
@@ -1025,7 +1044,7 @@ struct PlainShellView: View {
             Rectangle()
                 .fill(PlainTokens.Border.row)
                 .frame(height: Measurement.rowSeparatorThickness)
-                .padding(.leading, Spacing.xl + Measurement.completionCircleDiameter + Spacing.sm)
+                .padding(.leading, taskTextLeadingInset)
         }
         .listRowSeparator(.hidden)
         .tag(row.id)
@@ -1044,10 +1063,10 @@ struct PlainShellView: View {
                     .foregroundStyle(PlainTokens.TextToken.inverse)
             } else {
                 Circle()
-                    .fill(isRowHovered ? ringColor.opacity(0.08) : Color.clear)
+                    .fill(isRowHovered ? ringColor.opacity(0.10) : Color.clear)
                     .frame(width: Measurement.completionCircleDiameter, height: Measurement.completionCircleDiameter)
                 Circle()
-                    .stroke(ringColor.opacity(isRowHovered ? 1.0 : 0.75), lineWidth: 1.5)
+                    .stroke(ringColor.opacity(isRowHovered ? 1.0 : 0.55), lineWidth: 1.25)
                     .frame(width: Measurement.completionCircleDiameter, height: Measurement.completionCircleDiameter)
                 // Ghost check previews the action on hover.
                 Image(systemName: "checkmark")
@@ -1084,7 +1103,7 @@ struct PlainShellView: View {
             }
 
             List(model.visibleRows) { row in
-                HStack(spacing: Spacing.sm) {
+                HStack(spacing: Spacing.md) {
                     ZStack {
                         Circle()
                             .fill(PlainTokens.Status.completed)
@@ -1095,7 +1114,10 @@ struct PlainShellView: View {
                     }
 
                     if let priority = row.priority {
-                        PriorityBadge(priority: priority)
+                        Text(priority)
+                            .font(PlainType.priorityMarginal)
+                            .foregroundStyle(priorityColor(priority))
+                            .frame(width: Measurement.priorityMarginalWidth)
                     }
 
                     SyntaxHighlightedText(
@@ -1885,41 +1907,12 @@ private struct HighlightedText: View {
     }
 }
 
-/// A square serif letter chip — set like a drop cap, tinted by priority.
-private struct PriorityBadge: View {
-    let priority: String
-
-    var body: some View {
-        Text(priority)
-            .font(PlainType.priorityGlyph)
-            .foregroundStyle(priorityColor(priority))
-            .frame(width: 21, height: 21)
-            .background(
-                RoundedRectangle(cornerRadius: Radius.sm + 1, style: .continuous)
-                    .fill(priorityBgColor(priority))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: Radius.sm + 1, style: .continuous)
-                    .stroke(priorityColor(priority).opacity(0.25), lineWidth: 0.5)
-            )
-    }
-}
-
 private func priorityColor(_ priority: String) -> Color {
     switch priority {
     case "A": return PlainTokens.Priority.a
     case "B": return PlainTokens.Priority.b
     case "C": return PlainTokens.Priority.c
     default: return PlainTokens.Priority.low
-    }
-}
-
-private func priorityBgColor(_ priority: String) -> Color {
-    switch priority {
-    case "A": return PlainTokens.Priority.aBg
-    case "B": return PlainTokens.Priority.bBg
-    case "C": return PlainTokens.Priority.cBg
-    default: return PlainTokens.Priority.lowBg
     }
 }
 
@@ -2126,9 +2119,22 @@ private struct SyntaxHighlightedText: View {
         Text(coloredAttributedString(segment))
             .strikethrough(strikethrough)
             .italic(strikethrough)
+            .lineSpacing(3)
             .padding(.horizontal, highlighted ? 2 : 0)
             .background(highlighted ? PlainTokens.Search.highlight : Color.clear)
             .clipShape(RoundedRectangle(cornerRadius: Radius.sm, style: .continuous))
+    }
+
+    /// Renders a tag word with its sigil ("+" or "@") set lighter than the
+    /// name, so tags read as typeset words rather than raw syntax.
+    private func tagAttributedString(_ word: String, font: Font, tint: Color) -> AttributedString {
+        var sigil = AttributedString(String(word.prefix(1)))
+        sigil.font = font
+        sigil.foregroundColor = tint.opacity(0.5)
+        var name = AttributedString(String(word.dropFirst()))
+        name.font = font
+        name.foregroundColor = tint
+        return sigil + name
     }
 
     private func coloredAttributedString(_ segment: String) -> AttributedString {
@@ -2136,7 +2142,7 @@ private struct SyntaxHighlightedText: View {
         let words = segment.split(separator: " ", omittingEmptySubsequences: false)
         let baseFont = PlainType.taskBody(size: fontSize)
         let tagsFont = PlainType.taskTags(size: fontSize)
-        let metaFont = PlainType.taskMeta
+        let metaFont = PlainType.taskAnnotation(size: fontSize - 2)
 
         for (i, word) in words.enumerated() {
             if i > 0 {
@@ -2148,15 +2154,9 @@ private struct SyntaxHighlightedText: View {
 
             let w = String(word)
             if w.hasPrefix("+") && w.count > 1 {
-                var attr = AttributedString(w)
-                attr.font = tagsFont
-                attr.foregroundColor = PlainTokens.Syntax.project
-                result.append(attr)
+                result.append(tagAttributedString(w, font: tagsFont, tint: PlainTokens.Syntax.project))
             } else if w.hasPrefix("@") && w.count > 1 {
-                var attr = AttributedString(w)
-                attr.font = tagsFont
-                attr.foregroundColor = PlainTokens.Syntax.context
-                result.append(attr)
+                result.append(tagAttributedString(w, font: tagsFont, tint: PlainTokens.Syntax.context))
             } else if w.contains(":") && !w.hasPrefix(":") && !w.hasSuffix(":") && w.count > 2 {
                 var attr = AttributedString(w)
                 attr.font = metaFont
@@ -2223,7 +2223,7 @@ private struct GroupHeader: View {
                 .frame(height: 1)
             if count > 0 {
                 Text("\(count)")
-                    .font(PlainType.sidebarCount.monospacedDigit())
+                    .font(PlainType.groupCount)
                     .foregroundStyle(PlainTokens.TextToken.muted)
             }
         }
@@ -2298,6 +2298,17 @@ private struct SidebarSectionHeader: View {
     }
 }
 
+/// A horizontal run of dots, drawn as a dashed hairline with round caps —
+/// the leader line of a book's table of contents.
+private struct DotLeader: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.move(to: CGPoint(x: 0, y: rect.midY))
+        path.addLine(to: CGPoint(x: rect.width, y: rect.midY))
+        return path
+    }
+}
+
 private struct SidebarRow: View {
     let title: String
     let count: Int
@@ -2313,7 +2324,7 @@ private struct SidebarRow: View {
         HStack(spacing: Spacing.md) {
             if let icon {
                 Image(systemName: icon)
-                    .font(.system(size: 12, weight: .medium))
+                    .font(.system(size: 11.5, weight: .medium))
                     .foregroundStyle(iconTint)
                     .frame(width: 16)
             } else if let sigil {
@@ -2324,8 +2335,9 @@ private struct SidebarRow: View {
             }
             Text(title)
                 .font(PlainType.sidebarLabel)
-            Spacer()
+                .layoutPriority(1)
             if isOverdue && count > 0 {
+                Spacer(minLength: Spacing.md)
                 Text("\(count)")
                     .font(PlainType.sidebarCount.monospacedDigit())
                     .foregroundStyle(PlainTokens.TextToken.inverse)
@@ -2333,9 +2345,21 @@ private struct SidebarRow: View {
                     .padding(.vertical, 1)
                     .background(PlainTokens.Status.overdue, in: Capsule())
             } else if count > 0 {
+                // Dot leader runs from the entry to its count, table-of-contents style.
+                DotLeader()
+                    .stroke(
+                        PlainTokens.Gray.g300,
+                        style: StrokeStyle(lineWidth: 1.3, lineCap: .round, dash: [0.1, 4.5])
+                    )
+                    .frame(height: 2)
+                    .frame(maxWidth: .infinity)
+                    .padding(.horizontal, 1)
+                    .offset(y: 4)
                 Text("\(count)")
                     .font(PlainType.sidebarCount.monospacedDigit())
                     .foregroundStyle(PlainTokens.TextToken.muted)
+            } else {
+                Spacer()
             }
         }
         .frame(height: Measurement.sidebarItemHeight)

@@ -1775,7 +1775,7 @@ final class PlainShellModelTests: XCTestCase {
         let (firstStore, defaults, suiteName) = makePreferencesStore()
         defer { defaults.removePersistentDomain(forName: suiteName) }
 
-        XCTAssertEqual(firstStore.fontSize, 13)
+        XCTAssertEqual(firstStore.fontSize, 15)
         firstStore.fontSize = 16
 
         let secondStore = PreferencesStore(userDefaults: defaults)

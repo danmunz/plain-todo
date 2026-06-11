@@ -37,9 +37,11 @@ targets:
         INFOPLIST_KEY_NSPrincipalClass: NSApplication
         INFOPLIST_KEY_NSHumanReadableCopyright: ''
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
     info:
       path: Sources/PlainApp/Info.plist
       properties:
+        NSAccentColorName: AccentColor
         CFBundleURLTypes:
           - CFBundleURLName: com.danmunz.Plain
             CFBundleURLSchemes:

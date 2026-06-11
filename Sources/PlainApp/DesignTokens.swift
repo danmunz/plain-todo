@@ -130,16 +130,18 @@ enum PlainTokens {
 
 enum PlainType {
     // -- Named font helpers --
-    private static func charter(size: CGFloat) -> Font {
-        .custom("Charter Roman", size: size)
+    // Iowan Old Style: a warm, high-x-height book face (Apple Books' default).
+    // Chosen over Charter for visible texture at list sizes.
+    private static func iowan(size: CGFloat) -> Font {
+        .custom("IowanOldStyle-Roman", size: size)
     }
 
-    private static func charterBold(size: CGFloat) -> Font {
-        .custom("Charter Bold", size: size)
+    private static func iowanBold(size: CGFloat) -> Font {
+        .custom("IowanOldStyle-Bold", size: size)
     }
 
-    private static func charterItalic(size: CGFloat) -> Font {
-        .custom("Charter Italic", size: size)
+    private static func iowanItalic(size: CGFloat) -> Font {
+        .custom("IowanOldStyle-Italic", size: size)
     }
 
     private static func didot(size: CGFloat) -> Font {
@@ -154,38 +156,40 @@ enum PlainType {
         .custom("Didot-Italic", size: size)
     }
 
-    // -- App chrome (SF Pro — native, functional) --
+    // -- App chrome (SF Pro only where it must feel native) --
     static let windowTitle = Font.system(size: 13, weight: .semibold)
-    static let sidebarSection = Font.system(size: 10, weight: .heavy)
-    static let sidebarLabel = Font.system(size: 13, weight: .medium)
-    static let sidebarCount = Font.system(size: 12, weight: .regular)
-    static let groupHeader = Font.system(size: 11, weight: .heavy)
-    static let priorityBadge = Font.system(size: 11, weight: .bold)
+    static let sidebarSection = iowanBold(size: 10)
+    static let sidebarLabel = iowan(size: 13.5)
+    static let sidebarCount = iowan(size: 12)
+    static let groupHeader = iowanBold(size: 11)
     static let inputHint = Font.system(size: 11, weight: .regular)
     static let statusBar = Font.system(size: 11, weight: .regular)
     static let scratchPad = Font.system(size: 13, design: .monospaced)
     static let taskMeta = Font.system(size: 12, weight: .regular)
 
-    // -- Content (Charter — crisp screen serif by Matthew Carter) --
-    static let taskBody = charter(size: 14)
-    static let taskTags = charterBold(size: 14)
-    static let taskDueDate = Font.system(size: 11, weight: .medium)
-    static let taskDueDateUrgent = Font.system(size: 11, weight: .medium).italic()
-    static let inputBar = charter(size: 14)
-    static let inputPlaceholder = charterItalic(size: 14)
-    static let toastMessage = charterItalic(size: 12)
-    static let emptyState = charterItalic(size: 15)
+    // -- Content (Iowan Old Style — bookish, textured at reading sizes) --
+    static let taskBody = iowan(size: 15)
+    static let taskTags = iowanBold(size: 15)
+    static let taskDueDate = iowanItalic(size: 12)
+    static let taskDueDateUrgent = iowanItalic(size: 12)
+    static let inputBar = iowan(size: 15)
+    static let inputPlaceholder = iowanItalic(size: 15)
+    static let toastMessage = iowanItalic(size: 12)
+    static let emptyState = iowanItalic(size: 15)
 
     // -- Display (Didot — editorial, high-contrast) --
     static let onboardingHeading = Font.custom("Didot", size: 56)
-    static let onboardingBody = charter(size: 14)
+    static let onboardingBody = iowan(size: 14)
     static let mastheadTitle = didotBold(size: 30)
     static let mastheadDate = Font.system(size: 10, weight: .semibold)
-    static let mastheadMeta = charterItalic(size: 13)
+    static let mastheadMeta = iowanItalic(size: 13)
     static let panelTitle = didotBold(size: 20)
     static let emptyStateTitle = didotItalic(size: 22)
     static let colophon = Font.system(size: 9.5, weight: .medium)
-    static let priorityGlyph = charterBold(size: 13)
+    static let priorityGlyph = iowanBold(size: 13)
+    /// Bare priority letter set in the row's left margin, like printed marginalia.
+    static let priorityMarginal = didotBold(size: 16)
+    static let groupCount = iowanItalic(size: 11.5)
 
     // -- Icons (SF Pro, sized for SF Symbols) --
     static let iconSmall = Font.system(size: 11, weight: .bold)
@@ -194,22 +198,27 @@ enum PlainType {
 
     /// Returns a scaled taskBody font at the user's chosen size.
     static func taskBody(size: Double) -> Font {
-        charter(size: size)
+        iowan(size: size)
     }
 
     /// Returns a scaled taskTags font at the user's chosen size.
     static func taskTags(size: Double) -> Font {
-        charterBold(size: size)
+        iowanBold(size: size)
     }
 
     /// Returns a scaled inputBar font at the user's chosen size.
     static func inputBar(size: Double) -> Font {
-        charter(size: size)
+        iowan(size: size)
     }
 
     /// Returns a scaled emptyState font at the user's chosen size.
     static func emptyState(size: Double) -> Font {
-        charterItalic(size: size)
+        iowanItalic(size: size)
+    }
+
+    /// Returns a scaled font for key:value annotations inside task text.
+    static func taskAnnotation(size: Double) -> Font {
+        iowanItalic(size: size)
     }
 }
 
@@ -231,11 +240,11 @@ enum Measurement {
     static let sidebarWidthDefault: CGFloat = 220
     static let sidebarWidthMin: CGFloat = 180
     static let sidebarWidthMax: CGFloat = 300
-    static let taskRowMinHeight: CGFloat = 44
+    static let taskRowMinHeight: CGFloat = 42
+    static let priorityMarginalWidth: CGFloat = 18
     static let inputBarHeight: CGFloat = 48
     static let statusBarHeight: CGFloat = 28
     static let completionCircleDiameter: CGFloat = 18
-    static let priorityBadgeHeight: CGFloat = 22
     static let selectionBarWidth: CGFloat = 3
     static let groupHeaderHeight: CGFloat = 28
     static let sidebarItemHeight: CGFloat = 28
