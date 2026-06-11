@@ -6,9 +6,10 @@ struct PlainAppScenes: Scene {
     @ObservedObject var model: PlainShellModel
     @ObservedObject var quickAddController: QuickAddPanelController
     let isRunningTests: Bool
+    let updaterController: UpdaterController
 
     var body: some Scene {
-        PlainMainWindowScene(preferences: preferences, model: model, quickAddController: quickAddController)
+        PlainMainWindowScene(preferences: preferences, model: model, quickAddController: quickAddController, updaterController: updaterController)
         PlainSettingsScene(preferences: preferences)
         PlainMenuBarScene(preferences: preferences, model: model, quickAddController: quickAddController, isRunningTests: isRunningTests)
     }
@@ -18,6 +19,7 @@ private struct PlainMainWindowScene: Scene {
     @ObservedObject var preferences: PreferencesStore
     @ObservedObject var model: PlainShellModel
     @ObservedObject var quickAddController: QuickAddPanelController
+    let updaterController: UpdaterController
 
     var body: some Scene {
         WindowGroup(id: "main") {
@@ -79,6 +81,8 @@ private struct PlainMainWindowScene: Scene {
                         ),
                     ])
                 }
+                Divider()
+                CheckForUpdatesView(updaterController: updaterController)
             }
         }
     }

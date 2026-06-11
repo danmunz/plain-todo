@@ -33,9 +33,11 @@
 		8D3699BD63DC4CAEC95A7B94 /* PlainApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9074C8EDC17EAC36F9AF7CD9 /* PlainApp.swift */; };
 		98DECBEE9FB063D2FBF142A6 /* PlainShellModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2AB15A3803A8B5693E9C7369 /* PlainShellModelTests.swift */; };
 		A105861484DC2ACD027C5415 /* DatePhraseParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CA591985F337DE78E0AFCF2 /* DatePhraseParserTests.swift */; };
+		AA4DEB35DECD902082C1EB78 /* CheckForUpdatesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17BCDE0B40E02D3FA51034B8 /* CheckForUpdatesView.swift */; };
 		AAC3DCF3D717401BE32BFE28 /* SortPreferenceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAC46F0B2392BCE31F3FF94F /* SortPreferenceStore.swift */; };
 		AAE302EE87317B5D9C755FEF /* TodoParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 365E9D42C7E0863B5E2809A5 /* TodoParser.swift */; };
 		AC00987BB4984A61CB51C43E /* DatePhraseParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B46FB930146E8B673C98711 /* DatePhraseParser.swift */; };
+		AD5BF759FF5922AB4227C2C4 /* UpdaterController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D09AEBAA1C1E0707460CA784 /* UpdaterController.swift */; };
 		AF4B3017BE379EB6241E3BFB /* AutocompleteEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A57E29F1129387A2E63C073E /* AutocompleteEngine.swift */; };
 		B0B58BDCFA49C76BE3015912 /* PlainWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = A080FFE7FD812F26D033600E /* PlainWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		B328F742CC049904B1550A25 /* sample.txt in Resources */ = {isa = PBXBuildFile; fileRef = 7D51F145A39C103852A3747A /* sample.txt */; };
@@ -50,6 +52,7 @@
 		E458B0654FDD930279AD7D68 /* roundtrip.txt in Resources */ = {isa = PBXBuildFile; fileRef = D08BC1DF22DCD8D99139809B /* roundtrip.txt */; };
 		F5D5F06AD52F322B99E97E44 /* PlainAppScenes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 484F574EE539D1CC5379CBB9 /* PlainAppScenes.swift */; };
 		F9041F187C458EF033491A06 /* PlainCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6709428629AF9F777D14DC8F /* PlainCore.framework */; };
+		FAAE3D25261A4BB298661227 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = D31631231135F50759BF169E /* Sparkle */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -137,6 +140,7 @@
 		0CA591985F337DE78E0AFCF2 /* DatePhraseParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatePhraseParserTests.swift; sourceTree = "<group>"; };
 		0E07E99BD43CA029CB6BEF84 /* simple.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = simple.txt; sourceTree = "<group>"; };
 		12A5C8D49E9A1233D55055BA /* ArchiveTransaction.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArchiveTransaction.swift; sourceTree = "<group>"; };
+		17BCDE0B40E02D3FA51034B8 /* CheckForUpdatesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckForUpdatesView.swift; sourceTree = "<group>"; };
 		222CF9A9474B5CA29171C450 /* TodoSnapshotLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodoSnapshotLoader.swift; sourceTree = "<group>"; };
 		2562428BF4C9E1273C67F909 /* PlainCoreTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PlainCoreTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		2AB15A3803A8B5693E9C7369 /* PlainShellModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlainShellModelTests.swift; sourceTree = "<group>"; };
@@ -171,6 +175,7 @@
 		C1D921A0086C0CD0191AED79 /* TaskMutationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskMutationTests.swift; sourceTree = "<group>"; };
 		C8F327AF68D9BF6DDB3CDE73 /* ParserPerformanceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParserPerformanceTests.swift; sourceTree = "<group>"; };
 		D08BC1DF22DCD8D99139809B /* roundtrip.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = roundtrip.txt; sourceTree = "<group>"; };
+		D09AEBAA1C1E0707460CA784 /* UpdaterController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdaterController.swift; sourceTree = "<group>"; };
 		D24B5F77A61C59156CA864A4 /* SessionRestoreStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionRestoreStore.swift; sourceTree = "<group>"; };
 		E58B1E68A47F8EE5DCDAC28D /* MenuBarContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarContentView.swift; sourceTree = "<group>"; };
 		E9763AECAAD6FEB1933CEB2C /* CoordinatedTodoStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoordinatedTodoStore.swift; sourceTree = "<group>"; };
@@ -195,6 +200,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				0F93289BAC4B620D9703705D /* PlainCore.framework in Frameworks */,
+				FAAE3D25261A4BB298661227 /* Sparkle in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -215,6 +221,7 @@
 				5A92E422123FB83DED9432F3 /* Assets.xcassets */,
 				A57E29F1129387A2E63C073E /* AutocompleteEngine.swift */,
 				5BF87D13A2FEBB81C3C94E96 /* AutocompleteSuggestionPopup.swift */,
+				17BCDE0B40E02D3FA51034B8 /* CheckForUpdatesView.swift */,
 				5CE5628E209438C7082CBF9C /* DeepLinkRoute.swift */,
 				30FE67C41A5942A448483F64 /* DesignTokens.swift */,
 				799FA40D305345E972A46620 /* Info.plist */,
@@ -225,6 +232,7 @@
 				7ED98B2DC5394AD5F61C6E04 /* QuickAddPanelController.swift */,
 				D24B5F77A61C59156CA864A4 /* SessionRestoreStore.swift */,
 				AAC46F0B2392BCE31F3FF94F /* SortPreferenceStore.swift */,
+				D09AEBAA1C1E0707460CA784 /* UpdaterController.swift */,
 				B25E50A284EE64DC5D7EF455 /* Resources */,
 			);
 			name = PlainApp;
@@ -359,6 +367,7 @@
 			);
 			name = PlainApp;
 			packageProductDependencies = (
+				D31631231135F50759BF169E /* Sparkle */,
 			);
 			productName = PlainApp;
 			productReference = FA805540AC69F08ED8151DA9 /* PlainApp.app */;
@@ -480,6 +489,9 @@
 			);
 			mainGroup = AFCA76DD7C4653903B8101C0;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				6DE44DF890693CB8379A2418 /* XCRemoteSwiftPackageReference "Sparkle" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = C35D05B9FC67101C9732CE2A /* Products */;
 			projectDirPath = "";
@@ -525,6 +537,7 @@
 			files = (
 				AF4B3017BE379EB6241E3BFB /* AutocompleteEngine.swift in Sources */,
 				4CFE3901858F3DF2A931AE1C /* AutocompleteSuggestionPopup.swift in Sources */,
+				AA4DEB35DECD902082C1EB78 /* CheckForUpdatesView.swift in Sources */,
 				583B8B9D745409F8F7E3F2E0 /* DeepLinkRoute.swift in Sources */,
 				D31440120324C7D24EC01C45 /* DesignTokens.swift in Sources */,
 				081886006D513776ACD95147 /* MenuBarContentView.swift in Sources */,
@@ -534,6 +547,7 @@
 				D34417B3AF823E32AC16B81A /* QuickAddPanelController.swift in Sources */,
 				CF623C887725732752705241 /* SessionRestoreStore.swift in Sources */,
 				AAC3DCF3D717401BE32BFE28 /* SortPreferenceStore.swift in Sources */,
+				AD5BF759FF5922AB4227C2C4 /* UpdaterController.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1038,6 +1052,25 @@
 			defaultConfigurationName = Debug;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		6DE44DF890693CB8379A2418 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sparkle-project/Sparkle";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.6.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		D31631231135F50759BF169E /* Sparkle */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6DE44DF890693CB8379A2418 /* XCRemoteSwiftPackageReference "Sparkle" */;
+			productName = Sparkle;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 1CE545037161400820E47F68 /* Project object */;
 }

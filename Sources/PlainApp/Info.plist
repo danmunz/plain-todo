@@ -15,7 +15,7 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.0</string>
+	<string>0.0.0-dev</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -28,8 +28,12 @@
 		</dict>
 	</array>
 	<key>CFBundleVersion</key>
-	<string>1</string>
+	<string>0</string>
 	<key>NSAccentColorName</key>
 	<string>AccentColor</string>
+	<key>SUFeedURL</key>
+	<string>https://danmunz.github.io/plain-todo/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>K3gSFhIl7Yo9Z9v4Mq+goU3+wxJFSOWqrVQrqW8onF4=</string>
 </dict>
 </plist>

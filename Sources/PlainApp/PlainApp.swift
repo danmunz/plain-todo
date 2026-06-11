@@ -25,6 +25,7 @@ struct PlainApp: App {
     @StateObject private var model: PlainShellModel
     @StateObject private var quickAddController: QuickAddPanelController
     private let isRunningTests: Bool
+    private let updaterController: UpdaterController
 
     init() {
         let preferences = PreferencesStore()
@@ -34,6 +35,7 @@ struct PlainApp: App {
         _model = StateObject(wrappedValue: model)
         _quickAddController = StateObject(wrappedValue: quickAddController)
         self.isRunningTests = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+        self.updaterController = UpdaterController()
 
         TableRowSelectionOverride.install()
 
@@ -47,7 +49,8 @@ struct PlainApp: App {
             preferences: preferences,
             model: model,
             quickAddController: quickAddController,
-            isRunningTests: isRunningTests
+            isRunningTests: isRunningTests,
+            updaterController: updaterController
         )
     }
 }

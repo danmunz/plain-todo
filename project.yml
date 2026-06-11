@@ -7,6 +7,10 @@ settings:
   base:
     SWIFT_VERSION: 6.0
     MACOSX_DEPLOYMENT_TARGET: '14.0'
+packages:
+  Sparkle:
+    url: https://github.com/sparkle-project/Sparkle
+    from: "2.6.0"
 targets:
   PlainCore:
     type: framework
@@ -29,6 +33,7 @@ targets:
       - target: PlainCore
       - target: PlainWidgetExtension
         embed: true
+      - package: Sparkle
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.danmunz.Plain
@@ -42,6 +47,8 @@ targets:
       path: Sources/PlainApp/Info.plist
       properties:
         NSAccentColorName: AccentColor
+        SUFeedURL: https://danmunz.github.io/plain-todo/appcast.xml
+        SUPublicEDKey: K3gSFhIl7Yo9Z9v4Mq+goU3+wxJFSOWqrVQrqW8onF4=
         CFBundleURLTypes:
           - CFBundleURLName: com.danmunz.Plain
             CFBundleURLSchemes:
