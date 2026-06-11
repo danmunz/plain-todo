@@ -124,8 +124,8 @@ jobs:
 
           if [ -f appcast.xml ]; then
             # Insert new item before closing </channel>
-            ESCAPED_ITEM=$(echo "$NEW_ITEM" | sed 's/[&/\]/\\&/g')
-            awk -v item="$NEW_ITEM" '/<\/channel>/{print item}1' appcast.xml > appcast_tmp.xml
+            printf '%s\n' "$NEW_ITEM" > appcast_item.xml
+            awk 'FNR == NR { item = item $0 ORS; next } /<\/channel>/ { printf "%s", item } { print }' appcast_item.xml appcast.xml > appcast_tmp.xml
             mv appcast_tmp.xml appcast.xml
           else
             cat > appcast.xml <<APPCAST_EOF
