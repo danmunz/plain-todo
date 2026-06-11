@@ -87,12 +87,11 @@ After the first launch, macOS remembers your choice and opens it normally.
 Push a version tag to trigger a GitHub Actions build that archives and publishes:
 
 ```bash
-# bump version in Sources/PlainApp/Info.plist, then:
 git tag v0.1.0
 git push origin v0.1.0
 ```
 
-The workflow archives the app unsigned and attaches `Plain-vX.Y.Z-macOS.zip` to the GitHub Release.
+The workflow derives the app bundle version from the tag, archives the app unsigned, attaches `Plain-vX.Y.Z-macOS.zip` to the GitHub Release, and updates the Sparkle appcast on GitHub Pages.
 
 ## Status
 

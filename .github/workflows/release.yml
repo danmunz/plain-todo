@@ -47,6 +47,8 @@ jobs:
             -scheme PlainApp \
             -only-testing:PlainAppTests \
             -destination 'platform=macOS' \
+            MARKETING_VERSION=${{ steps.version.outputs.version }} \
+            CURRENT_PROJECT_VERSION=${{ steps.version.outputs.version }} \
             CODE_SIGNING_ALLOWED=NO \
             -quiet
 
@@ -56,6 +58,8 @@ jobs:
             -scheme PlainApp \
             -configuration Release \
             -destination 'generic/platform=macOS' \
+            MARKETING_VERSION=${{ steps.version.outputs.version }} \
+            CURRENT_PROJECT_VERSION=${{ steps.version.outputs.version }} \
             CODE_SIGNING_ALLOWED=NO \
             -archivePath ./build/Plain.xcarchive \
             -quiet
