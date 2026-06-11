@@ -20,7 +20,6 @@ final class PlainKeyboardEditingTests: XCTestCase {
     private var tempFileURL: URL!
 
     override func setUp() async throws {
-        try await super.setUp()
         continueAfterFailure = false
 
         let tempDir = FileManager.default.temporaryDirectory
@@ -40,7 +39,6 @@ final class PlainKeyboardEditingTests: XCTestCase {
 
     override func tearDown() async throws {
         try? FileManager.default.removeItem(at: tempFileURL)
-        try await super.tearDown()
     }
 
     // MARK: - Add Task
